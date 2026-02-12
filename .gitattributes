@@ -1,0 +1,15 @@
+# Documentation files - ensure consistent line endings
+*.md text eol=lf
+*.MD text eol=lf
+
+# Script files - ensure consistent line endings
+*.sh text eol=lf
+
+# Configuration files
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+
+# Ensure consistent line endings across all platforms
+* text=auto

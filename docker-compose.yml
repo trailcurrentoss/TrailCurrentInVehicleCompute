@@ -1,0 +1,111 @@
+name: trailcurrent
+
+services:
+  noderedproxy:
+    image: trailcurrent-in-vehicle-noderedproxy:latest
+    build:
+      context: ./containers/noderedproxy
+      dockerfile: Dockerfile
+    volumes:
+      - ./data/keys/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./data/keys/server.key:/etc/nginx/certs/server.key:ro
+    ports:
+      - "8443:8443"
+    restart: unless-stopped # Import for reboots
+    depends_on:
+      - mosquitto
+      - node-red
+  frontend:
+    image: trailcurrent-in-vehicle-frontend:latest
+    build:
+      context: ./containers/frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./data/keys/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./data/keys/server.key:/etc/nginx/certs/server.key:ro
+    ports:
+      - "443:443"
+    restart: unless-stopped # Import for reboots
+    depends_on:
+      - backend
+  backend:
+    image: trailcurrent-in-vehicle-backend:latest
+    build:
+      context: ./containers/backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - MONGODB_URI=mongodb://mongodb:27017/trailcurrent
+      - API_PORT=3000
+      - MQTT_BROKER_URL=mqtts://mosquitto:8883
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - TLS_CERT_HOSTNAME=${TLS_CERT_HOSTNAME}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - ./data/keys/ca.pem:/app/certs/ca.pem:ro
+    restart: unless-stopped # Import for reboots
+    depends_on:
+      - mosquitto
+      - mongodb
+      - tileserver
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+  mosquitto:
+    image: trailcurrent-in-vehicle-mosquitto:latest
+    build:
+      context: ./containers/mosquitto
+      dockerfile: Dockerfile
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    volumes:
+      - ./data/keys/server.crt:/mosquitto/certs/server.crt:ro
+      - ./data/keys/server.key:/mosquitto/certs/server.key:ro
+      - ./data/keys/ca.crt:/mosquitto/certs/ca.crt:ro
+      - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "8883:8883"
+    hostname: mosquitto
+    restart: always
+  node-red:
+    image: trailcurrent-in-vehicle-node-red:latest
+    build:
+      context: ./containers/node-red
+      dockerfile: Dockerfile
+    volumes:
+      - ./data/node-red:/data
+      - ./config/node-red/settings.js:/data/settings.js
+    depends_on:
+      - mosquitto
+    environment:
+      - NODE_RED_ADMIN_USER=${NODE_RED_ADMIN_USER}
+      - NODE_RED_ADMIN_PASSWORD=${NODE_RED_ADMIN_PASSWORD}
+      - CREDENTIAL_SECRET=${NODE_RED_CREDENTIAL_SECRET}
+      - NODE_RED_MQTT_BROKER_URL=mqtts://mosquitto:8883
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    restart: unless-stopped
+  tileserver:
+    image: trailcurrent/trailcurrent-tile-server:latest
+    volumes:
+      - ./data/tileserver/us-tiles.mbtiles:/data/tiles/us-tiles.mbtiles:ro
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "node /usr/src/app/src/healthcheck.js"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  node-red-data:
+  mongodb-data:
+  mosquitto-data:
+  mosquitto-log:

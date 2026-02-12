@@ -1,0 +1,39 @@
+# Development configuration - enables hot-reload for faster iteration
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  frontend:
+    ports:
+      - "443:443"
+    volumes:
+      # Hot-reload for frontend HTML/JS changes
+      - ./containers/frontend/public:/usr/share/nginx/html
+
+  backend:
+    ports:
+      - "3000:3000"
+      - "9229:9229"
+    # Mount source code for hot-reload with nodemon
+    volumes:
+      - ./containers/backend/src:/app/src
+    # Use nodemon instead of plain node for auto-restart on file changes
+    command:
+      - npx
+      - nodemon
+      - --inspect=0.0.0.0:9229
+      - src/index.js
+    environment:
+      - NODE_ENV=development
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
+  node-red:
+    ports:
+      - "1880:1880"
+
+  tileserver:
+    # Mount styles directory for hot-reload map style changes
+    volumes:
+      - ./containers/tileserver/styles:/data/styles

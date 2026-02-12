@@ -1,0 +1,228 @@
+const express = require('express');
+const router = express.Router();
+const { encrypt, decrypt } = require('../utils/crypto.js');
+
+module.exports = (db) => {
+    const systemConfig = db.collection('system_config');
+
+    // GET /api/system-config
+    router.get('/', async (req, res) => {
+        try {
+            const data = await systemConfig.findOne({ _id: 'main' });
+
+            if (!data) {
+                return res.json({
+                    _id: 'main',
+                    wizard_completed: false,
+                    cloud_enabled: false,
+                    cloud_url: '',
+                    mcu_modules: [],
+                    wifi_ssid: '',
+                    wifi_password: '',
+                    updated_at: new Date()
+                });
+            }
+
+            // Decrypt WiFi password if it exists
+            if (data.wifi_password_encrypted && data.wifi_password_iv) {
+                try {
+                    data.wifi_password = decrypt(data.wifi_password_encrypted, data.wifi_password_iv);
+                } catch (error) {
+                    console.error('Error decrypting WiFi password:', error);
+                    data.wifi_password = '';
+                }
+            } else {
+                data.wifi_password = '';
+            }
+
+            // Remove encrypted fields from response
+            delete data.wifi_password_encrypted;
+            delete data.wifi_password_iv;
+
+            res.json(data);
+        } catch (error) {
+            console.error('Error fetching system config:', error);
+            res.status(500).json({ error: 'Failed to fetch system config' });
+        }
+    });
+
+    // PUT /api/system-config
+    router.put('/', async (req, res) => {
+        try {
+            const { wizard_completed, cloud_enabled, cloud_url, mcu_modules, wifi_ssid, wifi_password } = req.body;
+
+            const updates = {};
+
+            if (wizard_completed !== undefined) {
+                if (typeof wizard_completed !== 'boolean') {
+                    return res.status(400).json({ error: 'wizard_completed must be a boolean' });
+                }
+                updates.wizard_completed = wizard_completed;
+            }
+
+            if (cloud_enabled !== undefined) {
+                if (typeof cloud_enabled !== 'boolean') {
+                    return res.status(400).json({ error: 'cloud_enabled must be a boolean' });
+                }
+                updates.cloud_enabled = cloud_enabled;
+            }
+
+            if (cloud_url !== undefined) {
+                if (typeof cloud_url !== 'string') {
+                    return res.status(400).json({ error: 'cloud_url must be a string' });
+                }
+                // Basic URL validation if cloud is enabled
+                if (cloud_enabled && cloud_url && !isValidUrl(cloud_url)) {
+                    return res.status(400).json({ error: 'Invalid cloud URL format' });
+                }
+                updates.cloud_url = cloud_url;
+            }
+
+            if (mcu_modules !== undefined) {
+                if (!Array.isArray(mcu_modules)) {
+                    return res.status(400).json({ error: 'mcu_modules must be an array' });
+                }
+                // Validate each module
+                for (const mod of mcu_modules) {
+                    if (!mod.type || !mod.name || !mod.hostname) {
+                        return res.status(400).json({ error: 'Each module must have type, name, and hostname' });
+                    }
+                    if (typeof mod.type !== 'string' || typeof mod.name !== 'string' || typeof mod.hostname !== 'string') {
+                        return res.status(400).json({ error: 'Module fields must be strings' });
+                    }
+                }
+                updates.mcu_modules = mcu_modules;
+            }
+
+            // Handle WiFi configuration
+            if (wifi_ssid !== undefined) {
+                if (typeof wifi_ssid !== 'string') {
+                    return res.status(400).json({ error: 'wifi_ssid must be a string' });
+                }
+                updates.wifi_ssid = wifi_ssid;
+            }
+
+            if (wifi_password !== undefined) {
+                if (typeof wifi_password !== 'string') {
+                    return res.status(400).json({ error: 'wifi_password must be a string' });
+                }
+                // Encrypt password if provided (non-empty)
+                if (wifi_password) {
+                    try {
+                        const encrypted = encrypt(wifi_password);
+                        updates.wifi_password_encrypted = encrypted.encrypted;
+                        updates.wifi_password_iv = encrypted.iv;
+                    } catch (error) {
+                        console.error('Error encrypting WiFi password:', error);
+                        return res.status(500).json({ error: 'Failed to encrypt WiFi password' });
+                    }
+                } else {
+                    // Clear password if empty string provided
+                    updates.wifi_password_encrypted = '';
+                    updates.wifi_password_iv = '';
+                }
+            }
+
+            if (Object.keys(updates).length === 0) {
+                return res.status(400).json({ error: 'No valid fields to update' });
+            }
+
+            updates.updated_at = new Date();
+
+            await systemConfig.updateOne(
+                { _id: 'main' },
+                { $set: updates }
+            );
+
+            // Trigger WiFi credential broadcast to MCUs via CAN if WiFi settings changed
+            if ((wifi_ssid !== undefined || wifi_password !== undefined) && wifi_ssid && wifi_password) {
+                const mqttService = require('../mqtt');
+                try {
+                    const currentSsid = wifi_ssid !== undefined ? wifi_ssid :
+                        (await systemConfig.findOne({ _id: 'main' })).wifi_ssid;
+                    const currentPassword = wifi_password !== undefined ? wifi_password :
+                        decrypt((await systemConfig.findOne({ _id: 'main' })).wifi_password_encrypted,
+                                (await systemConfig.findOne({ _id: 'main' })).wifi_password_iv);
+
+                    if (currentSsid && currentPassword) {
+                        console.log('[System Config] Publishing WiFi credentials to MCUs');
+                        mqttService.publishWifiCredentials(currentSsid, currentPassword);
+                    }
+                } catch (error) {
+                    console.error('[System Config] Error publishing WiFi credentials:', error);
+                    // Don't fail the request if MQTT publish fails
+                }
+            }
+
+            const data = await systemConfig.findOne({ _id: 'main' });
+
+            // Decrypt WiFi password for response
+            if (data.wifi_password_encrypted && data.wifi_password_iv) {
+                try {
+                    data.wifi_password = decrypt(data.wifi_password_encrypted, data.wifi_password_iv);
+                } catch (error) {
+                    console.error('Error decrypting WiFi password:', error);
+                    data.wifi_password = '';
+                }
+            } else {
+                data.wifi_password = '';
+            }
+
+            // Remove encrypted fields from response
+            delete data.wifi_password_encrypted;
+            delete data.wifi_password_iv;
+
+            res.json(data);
+        } catch (error) {
+            console.error('Error updating system config:', error);
+            res.status(500).json({ error: 'Failed to update system config' });
+        }
+    });
+
+    // POST /api/system-config/reset
+    router.post('/reset', async (req, res) => {
+        try {
+            const resetConfig = {
+                _id: 'main',
+                wizard_completed: false,
+                cloud_enabled: false,
+                cloud_url: '',
+                mcu_modules: [],
+                wifi_ssid: '',
+                wifi_password_encrypted: '',
+                wifi_password_iv: '',
+                updated_at: new Date()
+            };
+
+            await systemConfig.updateOne(
+                { _id: 'main' },
+                { $set: resetConfig },
+                { upsert: true }
+            );
+
+            res.json({
+                success: true,
+                message: 'Configuration reset successfully',
+                config: {
+                    ...resetConfig,
+                    wifi_password: ''
+                }
+            });
+        } catch (error) {
+            console.error('Error resetting system config:', error);
+            res.status(500).json({ error: 'Failed to reset system config' });
+        }
+    });
+
+    return router;
+};
+
+// Helper function to validate URL
+function isValidUrl(urlString) {
+    try {
+        new URL(urlString);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}

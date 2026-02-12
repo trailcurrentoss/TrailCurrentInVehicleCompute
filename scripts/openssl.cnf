@@ -1,0 +1,73 @@
+# OpenSSL Configuration for TrailCurrent SSL Certificates
+# This template supports both development and production certificate generation
+# The generate-certs.sh script substitutes MODE and HOSTNAME dynamically
+
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir              = ./data/keys
+certs            = $dir
+crl_dir          = $dir
+database         = $dir/index.txt
+new_certs_dir    = $dir
+serial           = $dir/serial
+RANDFILE         = $dir/private/.rand
+private_key      = $dir/ca.key
+certificate      = $dir/ca.crt
+crl              = $dir/crl.pem
+crl_extensions   = crl_ext
+default_crl_days = 30
+default_md       = sha256
+
+[ req ]
+default_bits        = 2048
+distinguished_name  = req_distinguished_name
+string_mask         = utf8only
+default_md          = sha256
+x509_extensions     = v3_ca
+
+[ req_distinguished_name ]
+countryName                     = Country Name (2 letter code)
+stateOrProvinceName             = State or Province Name
+localityName                    = Locality Name
+0.organizationName              = Organization Name
+organizationalUnitName          = Organizational Unit Name
+commonName                      = Common Name
+emailAddress                    = Email Address
+
+countryName_default             = US
+stateOrProvinceName_default     = State
+localityName_default            = City
+0.organizationName_default      = TrailCurrent
+organizationalUnitName_default  = Engineering
+emailAddress_default            = admin@trailcurrent.local
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ v3_intermediate_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:0
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ server_cert ]
+basicConstraints = CA:FALSE
+nsCertType = server
+nsComment = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+# Substitution: These will be replaced by generate-certs.sh
+# For DEVELOPMENT mode: includes localhost, 127.0.0.1, ::1, and hostname
+# For PRODUCTION mode: includes hostname, 127.0.0.1, and ::1
+[ alt_names ]
+DNS.1 = %%DNS_NAMES%%
+IP.1 = %%IP_ADDRESSES%%
