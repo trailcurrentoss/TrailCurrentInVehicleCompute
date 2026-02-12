@@ -50,4 +50,5 @@ build_*.log
 .claude/
 .claude.md
 .idea/
+.vscode/
 CLAUDE.md
