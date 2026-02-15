@@ -1,3 +1,7 @@
+**Setting up a new Raspberry Pi?** Start here: **[DOCS/RaspberryPiOneTimeSetup.md](DOCS/RaspberryPiOneTimeSetup.md)**
+
+---
+
 ## Deployment
 
 ### For Initial Device Setup (One-Time)

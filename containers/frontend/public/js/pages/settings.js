@@ -122,7 +122,7 @@ export const settingsPage = {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M23 4v6h-6"></path>
                         <path d="M1 20v-6h6"></path>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 __GIT_SHA__.49 15"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
                     Refresh
                 </button>
@@ -136,7 +136,7 @@ export const settingsPage = {
                 </div>
                 <button class="settings-action-btn settings-action-btn-danger" id="reset-config-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 __GIT_SHA__.74 2.74L3 5"></path>
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 5"></path>
                         <path d="M3 3v6h6"></path>
                     </svg>
                     Reset
@@ -244,7 +244,7 @@ export const settingsPage = {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="spinning">
                         <path d="M23 4v6h-6"></path>
                         <path d="M1 20v-6h6"></path>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 __GIT_SHA__.49 15"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
                     Refreshing...
                 `;
@@ -279,7 +279,7 @@ export const settingsPage = {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                             <path d="M23 4v6h-6"></path>
                             <path d="M1 20v-6h6"></path>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 __GIT_SHA__.49 15"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
                         Refresh
                     `;
@@ -299,7 +299,7 @@ export const settingsPage = {
                 const originalHTML = resetConfigBtn.innerHTML;
                 resetConfigBtn.innerHTML = `
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="spinning">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 __GIT_SHA__.74 2.74L3 5"></path>
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 5"></path>
                         <path d="M3 3v6h6"></path>
                     </svg>
                     Resetting...

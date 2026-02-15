@@ -1,138 +1,170 @@
 # Raspberry Pi Deployment Guide
 
-> **Status**: This guide is under development. For initial device setup, see [DOCS/PiSetup.md](DOCS/PiSetup.md). This document will be fully implemented when automated deployment is ready.
-
----
-
 ## Overview
 
-This document describes the deployment process for Raspberry Pi edge devices. Future versions will include:
+This document describes how to deploy TrailCurrent to a Raspberry Pi using the offline deployment package. The system uses pre-built Docker images bundled into a zip file — no internet access is required on the Pi after initial OS setup.
 
-- Pre-built Docker image deployment (offline-capable)
-- Automated deployment scripts
-- CI/CD pipeline integration
-- Update and rollback procedures
-- Firmware integration
-
-For now, manual deployment follows the steps below.
+For initial device setup (OS, Docker, CAN bus), see [DOCS/PiSetup.md](DOCS/PiSetup.md).
 
 ---
 
-## Current Manual Deployment Process
+## Deployment Package
+
+The deployment zip is created on your development machine using:
+
+```bash
+./create-deployment-package.sh --version=1.0.0
+```
+
+This produces `trailcurrent-deployment-1.0.0.zip` containing:
+- `images/*.tar` — 7 pre-built ARM64 Docker images (including MongoDB)
+- `docker-compose.yml` — Service orchestration
+- `config/` — Mosquitto and Node-RED configuration
+- `local_code/` — Python CAN-to-MQTT bridge and OTA helpers
+- `firmware/wired/` — MCU firmware binaries (if available)
+- `scripts/` — SSL certificate generation
+- `.env.example` — Environment variable template
+- `deploy.sh` — Deployment orchestrator
+- `PI_DEPLOYMENT.md` — This file
+
+---
+
+## First-Time Deployment
 
 ### Prerequisites
 
-- Device has been set up following [DOCS/PiSetup.md](DOCS/PiSetup.md)
-- SSH access to the device
-- Git repository cloned on the device
+- Raspberry Pi with Docker installed (see [DOCS/PiSetup.md](DOCS/PiSetup.md))
+- SSH access to the Pi
+- `jq` installed (`sudo apt install jq`) — needed for OTA firmware deployment
+- Map tiles file (`us-tiles.mbtiles`) transferred separately (~25GB)
 
-### Deploying New Code
+### Steps
 
-When you have new code to deploy to an already-configured device:
+1. **Transfer the deployment package to the Pi:**
+   ```bash
+   scp trailcurrent-deployment-1.0.0.zip trailcurrent@trailcurrent01.local:~
+   ```
 
-```bash
-# SSH to device
-ssh pi@trailcurrent01.local
+2. **SSH to the Pi and extract:**
+   ```bash
+   ssh trailcurrent@trailcurrent01.local
+   mkdir -p ~/trailcurrent
+   unzip trailcurrent-deployment-1.0.0.zip -d ~/trailcurrent
+   cd ~/trailcurrent
+   ```
 
-# Navigate to project directory
-cd TrailCurrentInVehicleCompute
+3. **Run the deployment script:**
+   ```bash
+   ./deploy.sh
+   ```
 
-# Pull latest code
-git pull
+   On first run, `deploy.sh` will:
+   - Create `.env` from `.env.example` and ask you to edit it (then re-run)
+   - Generate TLS certificates automatically using `scripts/generate-certs.sh`
+   - Load all Docker images from tar files
+   - Start all services
+   - Set up the CAN-to-MQTT bridge
+   - Deploy MCU firmware via OTA (if firmware is included)
 
-# Rebuild Docker images with new code
-docker compose build
+4. **Edit `.env` with your credentials** (first run only):
+   ```bash
+   nano .env
+   # Set these values:
+   #   MQTT_USERNAME / MQTT_PASSWORD
+   #   ADMIN_PASSWORD
+   #   TLS_CERT_HOSTNAME=trailcurrent01.local
+   #   ENCRYPTION_KEY=$(openssl rand -hex 32)
+   #   NODE_RED_CREDENTIAL_SECRET=$(openssl rand -hex 64)
+   ```
+   Then re-run `./deploy.sh`.
 
-# Start updated containers
-docker compose up -d
+5. **Place the map tiles file** (first time or when updating maps):
+   ```bash
+   mkdir -p data/tileserver
+   # Transfer us-tiles.mbtiles to data/tileserver/
+   ```
 
-# Verify all containers running
-docker compose ps
-
-# Check for errors in logs
-docker compose logs
-```
+6. **Access the application:**
+   ```
+   https://trailcurrent01.local
+   ```
 
 ---
 
-## What Persists Across Builds
+## Subsequent Updates
 
-When updating the application, these items are **PRESERVED** and never deleted:
+When deploying a new version:
+
+1. **Transfer new zip to Pi:**
+   ```bash
+   scp trailcurrent-deployment-1.1.0.zip trailcurrent@trailcurrent01.local:~/trailcurrent/
+   ```
+
+2. **Extract and deploy:**
+   ```bash
+   cd ~/trailcurrent
+   unzip -o trailcurrent-deployment-1.1.0.zip
+   ./deploy.sh
+   ```
+
+   On updates, `deploy.sh` will:
+   - Stop existing services
+   - Load updated Docker images
+   - Preserve your `.env`, certificates, map tiles, and Node-RED flows
+   - Restart all services
+   - Update MCU firmware if new firmware is included
+
+---
+
+## What Persists Across Updates
+
+These items are **PRESERVED** and never deleted by `deploy.sh`:
 
 ### Application Configuration
-- ✅ `.env` - Device-specific environment configuration
-  - MQTT credentials
-  - Admin password
-  - Encryption keys
-  - Device hostname
+- `.env` — Device-specific secrets and settings
+  - MQTT credentials, admin password, encryption keys, hostname
 
 ### Security
-- ✅ `data/keys/` - SSL certificates
-  - Server certificate and key
-  - CA certificate (for browser installation)
-  - 10-year validity - no need to regenerate on updates
+- `data/keys/` — TLS certificates
+  - Server certificate and key, CA certificate
+  - 10-year validity — no need to regenerate on updates
 
 ### Data
-- ✅ `data/tileserver/us-tiles.mbtiles` - Map tile database
-  - Once set up, persists across all updates
-  - Only update if map data needs refreshing
+- `data/tileserver/us-tiles.mbtiles` — Map tile database (~25GB)
+- `data/node-red/` — User-created Node-RED flows and credentials
+- MongoDB data volume — All application state
 
-- ✅ `data/node-red/` - User-created Node-RED flows
-  - All custom flows preserved
-  - Settings and credentials persist
-
-- ✅ `data/` (entire directory) - All application runtime data
-
-### Important
-
-**⚠️ CRITICAL: Never delete `data/` directory during updates!**
-
-```bash
-# WRONG - This deletes all persistent data
-rm -rf data/
-
-# RIGHT - Safe to run during updates
-docker compose pull
-docker compose build
-docker compose up -d
-```
+**CRITICAL: Never delete `data/` directory during updates!**
 
 ---
 
 ## What Changes During Updates
 
-These items are updated with new code/configuration:
-
-- Docker container images
+- Docker container images (loaded from new tar files)
 - Application code (backend, frontend, etc.)
-- Container configurations
-
-These items are NOT affected:
-- Certificates
-- Environment variables (.env)
-- Persistent data
+- Container configurations (`config/`)
+- Python local code (`local_code/`)
+- MCU firmware (if included in package)
 
 ---
 
 ## Verification After Deployment
-
-After deploying new code, verify:
 
 ```bash
 # All containers running
 docker compose ps
 
 # No errors in logs
-docker compose logs
+docker compose logs --tail=20
+
+# CAN-to-MQTT bridge running
+sudo systemctl status cantomqtt.service
 
 # API responding
 curl -k https://localhost/api/health
 
 # Web UI accessible
-curl -k https://localhost/
-
-# MQTT broker accessible
-docker compose logs mosquitto | tail -5
+curl -k -o /dev/null -s -w "%{http_code}" https://localhost/
 ```
 
 ---
@@ -140,115 +172,46 @@ docker compose logs mosquitto | tail -5
 ## Troubleshooting
 
 ### Containers fail to start
-
 ```bash
 # Check logs for specific service
 docker compose logs <service-name>
+# Services: backend, frontend, mosquitto, mongodb, node-red, noderedproxy, tileserver
 
-# Common services: backend, frontend, mosquitto, mongodb, node-red
+# Restart all containers
+docker compose down && docker compose up -d --no-build
+```
 
-# Restart containers
-docker compose down
-docker compose up -d
+### CAN-to-MQTT bridge not working
+```bash
+# Check service status
+sudo systemctl status cantomqtt.service
+sudo journalctl -u cantomqtt.service -f
+
+# Verify CAN bus interface
+ip link show can0
+
+# Check local_code .env has correct external hostname
+cat /home/trailcurrent/local_code/.env | grep MQTT_BROKER_URL
 ```
 
 ### Out of disk space
-
 ```bash
-# Check disk usage
 df -h
-
-# Clean Docker system
-docker system prune -f
-
-# Note: This removes unused images/containers but preserves `data/` directory
+docker system prune -f  # Removes unused images, preserves data/
 ```
 
 ### Network issues
-
 ```bash
-# Check device hostname resolution
 nslookup trailcurrent01.local
-
-# Check network connectivity
-ping 8.8.8.8
-
-# Restart network
-sudo systemctl restart networking
+ping trailcurrent01.local
 ```
-
----
-
-## Future Automation
-
-Planned deployment automation (similar to [TrailCurrentPiCanToMqttAndDocker project](https://github.com/TumorAI/TrailCurrentPiCanToMqttAndDocker)):
-
-### Development-Time Scripts
-1. **`build-and-save-images.sh`**
-   - Build Docker images for ARM64 (Raspberry Pi)
-   - Save as `.tar` files for offline transport
-   - NOT run on device
-
-2. **`create-deployment-package.sh`**
-   - Bundle pre-built images into deployment ZIP
-   - Include device-specific config templates
-   - Version tracking
-   - NOT run on device
-
-### Runtime Script
-3. **`deploy.sh`** (on device)
-   - Single idempotent deployment script
-   - Works for both initial setup AND updates
-   - Loads Docker images
-   - Starts services
-   - Applies updates
-   - Seamlessly handles both scenarios
-
-### Integrated Features
-- OTA (Over-The-Air) updates
-- Firmware integration
-- Rollback capabilities
-- Offline deployment support
-
----
-
-## Manual Setup Until Automation Ready
-
-Until automation scripts are available, follow this manual process:
-
-1. **Initial Device Setup (One-Time)**
-   - Follow [DOCS/PiSetup.md](DOCS/PiSetup.md)
-   - Set up `.env`, certificates, and mbtiles
-
-2. **Subsequent Updates**
-   ```bash
-   git pull
-   docker compose build
-   docker compose up -d
-   ```
-
-3. **Verify**
-   ```bash
-   docker compose ps
-   docker compose logs
-   ```
-
----
-
-## Questions?
-
-For issues or questions:
-
-1. Check container logs: `docker compose logs <service>`
-2. Verify device setup: See [DOCS/PiSetup.md](DOCS/PiSetup.md)
-3. Review development docs: See `README.md`
-4. Check map tiles setup: See `DOCS/UpdatingMapTiles.md`
 
 ---
 
 ## Reference
 
-- **Initial Setup**: [DOCS/PiSetup.md](DOCS/PiSetup.md)
+- **Initial Pi Setup**: [DOCS/PiSetup.md](DOCS/PiSetup.md)
+- **Firmware Integration**: [FIRMWARE_SETUP.md](FIRMWARE_SETUP.md)
+- **OTA System Details**: [OTA_DEPLOYMENT_IMPLEMENTATION.md](OTA_DEPLOYMENT_IMPLEMENTATION.md)
 - **Development**: [README.md](README.md)
 - **Map Tiles**: [DOCS/UpdatingMapTiles.md](DOCS/UpdatingMapTiles.md)
-- **Reference Project**: [TrailCurrentPiCanToMqttAndDocker](https://github.com/TumorAI/TrailCurrentPiCanToMqttAndDocker) - Shows planned automation
