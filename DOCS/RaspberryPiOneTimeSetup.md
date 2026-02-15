@@ -10,13 +10,17 @@ This guide walks through setting up a **brand new Raspberry Pi** to run TrailCur
 
 Download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Insert the SD card into your development machine and launch the Imager.
 
-![Pi Imager main screen](IMGS/pi_imager_main_screen.png)
+**1. Choose Device** — Click the **CHOOSE DEVICE** button and select your Raspberry Pi model (Pi 4 or Pi 5).
 
-**1. Choose Device** — Select your Raspberry Pi model (Pi 4 or Pi 5).
+![Pi Imager - Choose Device button](IMGS/pi_imager_choose_device.png)
 
 ![Pi Imager device selection](IMGS/pi_imager_device_selection.png)
 
-**2. Choose OS** — Select **Raspberry Pi OS (other)** to see additional options.
+**2. Choose OS** — Click the **CHOOSE OS** button.
+
+![Pi Imager - Choose OS button](IMGS/pi_imager_choose_os.png)
+
+Select **Raspberry Pi OS (other)** to see additional options.
 
 ![Pi Imager OS selection - other](IMGS/pi_imager_os_other.png)
 
@@ -24,11 +28,17 @@ Then select **Raspberry Pi OS Lite (64-bit)**. This is the headless version with
 
 ![Pi Imager OS selection - Lite](IMGS/pi_imager_os_lite.png)
 
-**3. Choose Storage** — Select your SD card.
+**3. Choose Storage** — Click the **CHOOSE STORAGE** button and select your SD card.
+
+![Pi Imager - Choose Storage button](IMGS/pi_imager_choose_storage.png)
 
 ![Pi Imager storage selection](IMGS/pi_imager_sd_select.png)
 
-**4. Configure OS Settings** — Click **NEXT**. Pi Imager will ask to apply OS customisation settings. Click **EDIT SETTINGS** to configure them.
+**4. Configure OS Settings** — Click the **NEXT** button.
+
+![Pi Imager - Next button](IMGS/pi_imager_next.png)
+
+Pi Imager will ask to apply OS customisation settings. Click **EDIT SETTINGS** to configure them.
 
 **General tab** — Set the hostname, username, password, WiFi SSID/password, and locale. WiFi is required for SSH access, deployment transfers, and the web UI.
 
