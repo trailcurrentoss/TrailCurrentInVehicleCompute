@@ -8,7 +8,27 @@ This guide walks through setting up a **brand new Raspberry Pi** to run TrailCur
 
 ### Flash the SD Card
 
-Use the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to flash **Raspberry Pi OS Lite (64-bit)**. Configure the OS customisation settings before flashing:
+Download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Insert the SD card into your development machine and launch the Imager.
+
+![Pi Imager main screen](IMGS/pi_imager_main_screen.png)
+
+**1. Choose Device** — Select your Raspberry Pi model (Pi 4 or Pi 5).
+
+![Pi Imager device selection](IMGS/pi_imager_device_selection.png)
+
+**2. Choose OS** — Select **Raspberry Pi OS (other)** to see additional options.
+
+![Pi Imager OS selection - other](IMGS/pi_imager_os_other.png)
+
+Then select **Raspberry Pi OS Lite (64-bit)**. This is the headless version with no desktop environment.
+
+![Pi Imager OS selection - Lite](IMGS/pi_imager_os_lite.png)
+
+**3. Choose Storage** — Select your SD card.
+
+![Pi Imager storage selection](IMGS/pi_imager_sd_select.png)
+
+**4. Configure OS Settings** — Click **NEXT**. Pi Imager will ask to apply OS customisation settings. Click **EDIT SETTINGS** to configure them.
 
 **General tab** — Set the hostname, username, password, WiFi SSID/password, and locale. WiFi is required for SSH access, deployment transfers, and the web UI.
 
@@ -22,7 +42,7 @@ Use the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to flash **
 
 ![Pi Imager Options settings](IMGS/pi_imager_options.png)
 
-Click **SAVE**. When prompted to apply OS customisation settings, click **YES** to begin flashing.
+**5. Flash** — Click **SAVE**. When prompted to apply OS customisation settings, click **YES** to begin flashing.
 
 ![Pi Imager customisation prompt](IMGS/pi_imager_confirm.png)
 
