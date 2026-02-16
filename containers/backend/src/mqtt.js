@@ -464,8 +464,8 @@ class MqttService {
 
         const ssidBytes = Buffer.from(ssid, 'utf8');
         const passwordBytes = Buffer.from(password, 'utf8');
-        const ssidChunks = Math.ceil(ssidBytes.length / 7);
-        const passwordChunks = Math.ceil(passwordBytes.length / 7);
+        const ssidChunks = Math.ceil(ssidBytes.length / 6);
+        const passwordChunks = Math.ceil(passwordBytes.length / 6);
 
         // Helper to send with delay
         const sendWithDelay = (messages, index = 0) => {
@@ -487,8 +487,8 @@ class MqttService {
         // 2. SSID chunks
         for (let i = 0; i < ssidChunks; i++) {
             const chunk = [0x02, i];
-            const start = i * 7;
-            const end = Math.min(start + 7, ssidBytes.length);
+            const start = i * 6;
+            const end = Math.min(start + 6, ssidBytes.length);
             for (let j = start; j < end; j++) {
                 chunk.push(ssidBytes[j]);
             }
@@ -499,8 +499,8 @@ class MqttService {
         // 3. Password chunks
         for (let i = 0; i < passwordChunks; i++) {
             const chunk = [0x03, i];
-            const start = i * 7;
-            const end = Math.min(start + 7, passwordBytes.length);
+            const start = i * 6;
+            const end = Math.min(start + 6, passwordBytes.length);
             for (let j = start; j < end; j++) {
                 chunk.push(passwordBytes[j]);
             }
