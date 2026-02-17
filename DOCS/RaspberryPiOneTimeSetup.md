@@ -8,17 +8,23 @@ This guide walks through setting up a **brand new Raspberry Pi** to run TrailCur
 
 ### Flash the SD Card
 
-Download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Insert the SD card into your development machine and launch the Imager.
+Download and install **Raspberry Pi Imager v2.0.6 or newer**. Older versions (1.9.x and below) will silently fail to apply OS customisation settings on Trixie-based images.
+
+> **Important:** As of early 2026, neither apt (ships 1.8.5) nor snap (ships 1.9.6) provide a new enough version. Download v2.0.6+ directly from the [GitHub releases page](https://github.com/raspberrypi/rpi-imager/releases):
+>
+> - **Windows** — `imager-v2.0.6.exe`
+> - **macOS** — `rpi-imager-v2.0.6.dmg`
+> - **Linux (deb)** — `rpi-imager_2.0.6_amd64.deb`, then install with `sudo apt install ./rpi-imager_2.0.6_amd64.deb` (using `apt` instead of `dpkg` ensures dependencies are resolved automatically; if the download fails with a `dpkg-deb` error, re-download the file — it was likely truncated)
+> - **Linux (AppImage)** — `Raspberry_Pi_Imager-v2.0.6-desktop-x86_64.AppImage`, then `chmod +x` and run directly
+
+Insert the SD card into your development machine and launch the Imager.
 
 **1. Choose Device** — Click the **CHOOSE DEVICE** button and select your Raspberry Pi model (Pi 4 or Pi 5).
 
 ![Pi Imager - Choose Device button](IMGS/pi_imager_choose_device.png)
 
-![Pi Imager device selection](IMGS/pi_imager_device_selection.png)
 
 **2. Choose OS** — Click the **CHOOSE OS** button.
-
-![Pi Imager - Choose OS button](IMGS/pi_imager_choose_os.png)
 
 Select **Raspberry Pi OS (other)** to see additional options.
 
@@ -39,36 +45,37 @@ Then select **Raspberry Pi OS Lite (64-bit)**. This is the headless version with
 ![Pi Imager - Next button](IMGS/pi_imager_next.png)
 
 Pi Imager will ask to apply OS customisation settings. Click **EDIT SETTINGS** to configure them.
+![Pi Imager - Edit Settings](IMGS/pi_imager_edit_settings.png)
 
 **General tab** — Set the hostname, username, password, WiFi SSID/password, and locale. WiFi is required for SSH access, deployment transfers, and the web UI.
 
-![Pi Imager General settings](IMGS/pi_imager_general.png)
+![Pi Imager Host Name](IMGS/pi_imager_hostname.png)
 
 **Services tab** — Enable SSH with password authentication.
 
 ![Pi Imager Services settings](IMGS/pi_imager_services.png)
 
-**Options tab** — Uncheck **"Eject media when finished"** so the SD card stays mounted for the SSH verification step below.
+**Options tab** — Uncheck **"Eject media when finished"** so the SD card stays mounted for the SSH verification step below. Click **SAVE**
 
 ![Pi Imager Options settings](IMGS/pi_imager_options.png)
 
-**5. Flash** — Click **SAVE**. When prompted to apply OS customisation settings, click **YES** to begin flashing.
+**5. Flash** — When prompted to apply OS customisation settings, click **YES** to begin flashing.
 
 ![Pi Imager customisation prompt](IMGS/pi_imager_confirm.png)
 
-### Verify SSH Is Enabled
+### Verify First-Boot Customisation
 
-Pi Imager sometimes fails to apply SSH settings. After flashing completes (with the SD card still mounted), verify SSH is enabled on the boot partition:
+After flashing, verify Pi Imager applied your customisation settings. Mount the boot partition:
 
-```bash
-# Check if the ssh file exists on the boot partition (path may vary)
-ls /media/$USER/bootfs/ssh
+- **Linux** — the SD card is not mounted after flashing. Remove it and re-insert it so the `bootfs` partition mounts automatically (typically at `/media/<user>/bootfs/`).
+- **macOS** — the boot partition usually auto-mounts at `/Volumes/bootfs/`.
+- **Windows** — the boot partition appears as a drive letter in File Explorer (e.g. `D:\`).
 
-# If the file does not exist, create it:
-touch /media/$USER/bootfs/ssh
-```
+Open the `user-data` file in a text editor and verify it contains **uncommented** configuration — not just the default template. If Pi Imager applied settings correctly, you will see active (non-commented) lines for `hostname`, `users`, `ssh_pwauth`, etc.
 
-Safely eject the SD card after confirming the file exists.
+If the file contains only comments (lines starting with `#`), your Pi Imager version is too old. Update to v2.0.6+ and re-flash.
+
+Safely eject the SD card after confirming `user-data` has active configuration.
 
 ### Hardware
 
@@ -78,9 +85,44 @@ Safely eject the SD card after confirming the file exists.
 
 ---
 
-## Step 1: Get the Setup Script onto the Pi
+## Step 1: Insert the SD Card
 
-Boot the Pi and SSH in:
+Insert the flashed SD card into the Pi's microSD slot.
+
+---
+
+## Step 2: Install the TrailCurrent CAN Hat
+
+With the Pi powered off, install the SD Card, and the TrailCurrent CAN Hat onto the Pi 5 GPIO header.
+
+![TrailCurrent CAN Hat installed on Pi — bottom view](IMGS/can_hat_bottom_view.jpg)
+
+![TrailCurrent CAN Hat installed on Pi — top view](IMGS/can_hat_top_view.jpg)
+
+
+Connect the JST XH 4-pin cable (JST S4B-XH-SM4-TB) to the hat. The pinout from left to right is:
+
+![JST XH 4-pin connector pinout](IMGS/jst_xh_4pin_pinout.png)
+
+> **WARNING:** There is no reverse polarity protection on this circuit. Incorrect wiring will damage the Pi. Double-check the pinout before applying power.
+
+---
+
+## Step 3: Connect to the Network
+
+Plug the Pi into an available LAN port on your WiFi router using an Ethernet cable.
+
+---
+
+## Step 4: Boot the Pi
+
+Connect power to the Pi so that it boots.
+
+---
+
+## Step 5: Get the Setup Script onto the Pi
+
+SSH in:
 
 ```bash
 ssh <username>@<pi-ip-address>
@@ -94,7 +136,7 @@ scp -r rpi_one_time/ <username>@<pi-ip-address>:~/
 
 ---
 
-## Step 2: Run the Setup Script
+## Step 6: Run the Setup Script
 
 ```bash
 cd ~/rpi_one_time
@@ -120,7 +162,7 @@ The script installs and configures everything automatically:
 
 ---
 
-## Step 3: Reboot
+## Step 7: Reboot
 
 A reboot is required for SPI and the CAN overlay to take effect:
 
@@ -130,7 +172,7 @@ sudo reboot
 
 ---
 
-## Step 4: Verify
+## Step 8: Verify
 
 After the Pi comes back up, SSH in and verify:
 
@@ -150,7 +192,7 @@ If `can0` shows `state UP`, the hardware and driver are working.
 
 ---
 
-## Step 5: Transfer Map Tiles
+## Step 9: Transfer Map Tiles
 
 The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/trailcurrent/data/tileserver/us-tiles.mbtiles` then re-create as a file).
 
