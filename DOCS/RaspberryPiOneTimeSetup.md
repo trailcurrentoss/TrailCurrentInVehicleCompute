@@ -17,51 +17,59 @@ Download and install **Raspberry Pi Imager v2.0.6 or newer**. Older versions (1.
 > - **Linux (deb)** — `rpi-imager_2.0.6_amd64.deb`, then install with `sudo apt install ./rpi-imager_2.0.6_amd64.deb` (using `apt` instead of `dpkg` ensures dependencies are resolved automatically; if the download fails with a `dpkg-deb` error, re-download the file — it was likely truncated)
 > - **Linux (AppImage)** — `Raspberry_Pi_Imager-v2.0.6-desktop-x86_64.AppImage`, then `chmod +x` and run directly
 
-Insert the SD card into your development machine and launch the Imager.
+Insert the SD card into your development machine and launch the Imager. Pi Imager v2.0.6 uses a step-by-step wizard — each screen is accessed via the sidebar on the left.
 
-**1. Choose Device** — Click the **CHOOSE DEVICE** button and select your Raspberry Pi model (Pi 4 or Pi 5).
+**1. Device** — Select your Raspberry Pi model (Pi 4 or Pi 5).
 
-![Pi Imager - Choose Device button](IMGS/pi_imager_choose_device.png)
+![Pi Imager — Device selection](IMGS/pi_imager_choose_device.png)
 
+**2. OS** — Select **Raspberry Pi OS (other)** to see additional options.
 
-**2. Choose OS** — Click the **CHOOSE OS** button.
+![Pi Imager — OS category selection](IMGS/pi_imager_os_other.png)
 
-Select **Raspberry Pi OS (other)** to see additional options.
+Then select **Raspberry Pi OS Lite (64-bit)**. This is the headless version (no desktop environment) based on Debian Trixie.
 
-![Pi Imager OS selection - other](IMGS/pi_imager_os_other.png)
+![Pi Imager — OS Lite selection](IMGS/pi_imager_os_lite.png)
 
-Then select **Raspberry Pi OS Lite (64-bit)**. This is the headless version with no desktop environment.
+**3. Storage** — Select your SD card.
 
-![Pi Imager OS selection - Lite](IMGS/pi_imager_os_lite.png)
+![Pi Imager — Storage selection](IMGS/pi_imager_choose_storage.png)
 
-**3. Choose Storage** — Click the **CHOOSE STORAGE** button and select your SD card.
+**4. Customisation** — After selecting storage, the wizard moves into the customisation steps. Do **not** click **SKIP CUSTOMISATION** — these settings are required for SSH access on first boot.
 
-![Pi Imager - Choose Storage button](IMGS/pi_imager_choose_storage.png)
+**Hostname** — Enter a hostname for the Pi. This name identifies the device on the network (reachable via `<hostname>.local` once Avahi is installed).
 
-![Pi Imager storage selection](IMGS/pi_imager_sd_select.png)
+![Pi Imager — Hostname](IMGS/pi_imager_hostname.png)
 
-**4. Configure OS Settings** — Click the **NEXT** button.
+**Localisation** — Select your capital city to set the WiFi regulatory domain, then adjust the **Time zone** and **Keyboard layout** dropdowns as needed. For US users, select **Washington, D.C. (United States)** as the capital city — this defaults to Eastern time. Change the **Time zone** dropdown to your local zone (e.g. `America/Chicago` for Central).
 
-![Pi Imager - Next button](IMGS/pi_imager_next.png)
+> **Tip:** The capital city dropdown contains several hundred entries. Type the first letter of the city name to jump to that section, or use arrow keys to scroll.
 
-Pi Imager will ask to apply OS customisation settings. Click **EDIT SETTINGS** to configure them.
-![Pi Imager - Edit Settings](IMGS/pi_imager_edit_settings.png)
+![Pi Imager — Localisation](IMGS/pi_imager_capital_city.png)
 
-**General tab** — Set the hostname, username, password, WiFi SSID/password, and locale. WiFi is required for SSH access, deployment transfers, and the web UI.
+**User** — Create a username and password. You will use these credentials to SSH into the Pi. The username must be lowercase.
 
-![Pi Imager Host Name](IMGS/pi_imager_hostname.png)
+![Pi Imager — User](IMGS/pi_imager_username_and_password.png)
 
-**Services tab** — Enable SSH with password authentication.
+**Wi-Fi** — If the Pi will use a wired Ethernet connection, **clear the SSID field** (delete any text) so Pi Imager skips WiFi configuration. If you need WiFi, enter your network SSID and password.
 
-![Pi Imager Services settings](IMGS/pi_imager_services.png)
+![Pi Imager — Wi-Fi](IMGS/pi_imager_wifi.png)
 
-**Options tab** — Uncheck **"Eject media when finished"** so the SD card stays mounted for the SSH verification step below. Click **SAVE**
+**Remote access** — Enable **SSH** and select **Use password authentication**.
 
-![Pi Imager Options settings](IMGS/pi_imager_options.png)
+![Pi Imager — SSH authentication](IMGS/pi_imager_ssh.png)
 
-**5. Flash** — When prompted to apply OS customisation settings, click **YES** to begin flashing.
+**Raspberry Pi Connect** — Leave this **disabled**. It is not needed for TrailCurrent.
 
-![Pi Imager customisation prompt](IMGS/pi_imager_confirm.png)
+![Pi Imager — Raspberry Pi Connect](IMGS/pi_imager_pi_connect.png)
+
+**5. Write** — Review the summary to verify your selections, then click **WRITE**.
+
+![Pi Imager — Write summary](IMGS/pi_imager_summary.png)
+
+Confirm by clicking **I UNDERSTAND, ERASE AND WRITE** to begin flashing.
+
+![Pi Imager — Erase confirmation](IMGS/pi_imager_confirmation.png)
 
 ### Verify First-Boot Customisation
 
