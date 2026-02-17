@@ -71,20 +71,6 @@ Confirm by clicking **I UNDERSTAND, ERASE AND WRITE** to begin flashing.
 
 ![Pi Imager — Erase confirmation](IMGS/pi_imager_confirmation.png)
 
-### Verify First-Boot Customisation
-
-After flashing, verify Pi Imager applied your customisation settings. Mount the boot partition:
-
-- **Linux** — the SD card is not mounted after flashing. Remove it and re-insert it so the `bootfs` partition mounts automatically (typically at `/media/<user>/bootfs/`).
-- **macOS** — the boot partition usually auto-mounts at `/Volumes/bootfs/`.
-- **Windows** — the boot partition appears as a drive letter in File Explorer (e.g. `D:\`).
-
-Open the `user-data` file in a text editor and verify it contains **uncommented** configuration — not just the default template. If Pi Imager applied settings correctly, you will see active (non-commented) lines for `hostname`, `users`, `ssh_pwauth`, etc.
-
-If the file contains only comments (lines starting with `#`), your Pi Imager version is too old. Update to v2.0.6+ and re-flash.
-
-Safely eject the SD card after confirming `user-data` has active configuration.
-
 ### Hardware
 
 - Raspberry Pi 4 or 5 (8GB RAM recommended)
@@ -128,27 +114,21 @@ Connect power to the Pi so that it boots.
 
 ---
 
-## Step 5: Get the Setup Script onto the Pi
+## Step 5: Transfer and Run the Setup Script
 
-SSH in:
+On your development machine, open a terminal and navigate to the directory where you cloned this repository. Then transfer the setup script to the Pi:
+
+```bash
+cd <path-to-your-clone>/TrailCurrentInVehicleCompute
+scp rpi_one_time/setup-pi.sh <username>@<pi-ip-address>:~/
+```
+
+SSH into the Pi and run it:
 
 ```bash
 ssh <username>@<pi-ip-address>
-```
-
-Transfer the `rpi_one_time` folder from this repository to the Pi. For example, from your development machine:
-
-```bash
-scp -r rpi_one_time/ <username>@<pi-ip-address>:~/
-```
-
----
-
-## Step 6: Run the Setup Script
-
-```bash
-cd ~/rpi_one_time
-sudo ./setup-pi.sh
+chmod +x ~/setup-pi.sh
+sudo ~/setup-pi.sh
 ```
 
 The script installs and configures everything automatically:
@@ -160,7 +140,7 @@ The script installs and configures everything automatically:
 | 3 | Installs Docker and Docker Compose plugin, enables on boot |
 | 4 | Enables SPI interface via `raspi-config` |
 | 5 | Adds MCP2515 CAN bus overlay to boot config (12MHz oscillator, GPIO25 interrupt) |
-| 6 | Configures `can0` network interface to auto-start at 500kbps |
+| 6 | Installs `can0.service` systemd unit to auto-start CAN interface at 500kbps |
 | 7 | Adds your user to the `docker` group |
 | 8 | Configures auto-boot on power — Pi 5 only (no power button needed in vehicle) |
 | 9 | Creates Python virtual environment at `~/local_code/cantomqtt` |
@@ -185,18 +165,22 @@ sudo reboot
 After the Pi comes back up, SSH in and verify:
 
 ```bash
-# SPI device files should exist
+# Should list /dev/spidev0.0 and /dev/spidev0.1
 ls /dev/spidev0.*
 
-# CAN interface should be UP
+# Should show the can0 interface — confirms the SPI overlay and MCP2515 driver are loaded
 ip link show can0
 
-# Docker should be running
+# Should print a version string (e.g. "Docker version 27.x.x")
 docker --version
+
+# Should print a version string (e.g. "Docker Compose version v2.x.x")
 docker compose version
 ```
 
-If `can0` shows `state UP`, the hardware and driver are working.
+> **Note:** After setup and reboot, `can0` should show `state UP`. If it shows `state DOWN` with `qdisc noop`, the `can0.service` did not start — check with `systemctl status can0.service`.
+
+If `can0` does not appear at all, the CAN hat overlay or wiring may be incorrect. If any command is not found, re-run the setup script.
 
 ---
 

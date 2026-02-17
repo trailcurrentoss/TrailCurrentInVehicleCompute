@@ -12,7 +12,7 @@ set -e
 #   3. Installs Docker and Docker Compose plugin
 #   4. Enables SPI interface (required for MCP2515 CAN controller)
 #   5. Configures MCP2515 CAN bus overlay (12MHz crystal, SPI0/CE0, GPIO25 interrupt)
-#   6. Installs can0 systemd service to auto-start on boot (500kbps)
+#   6. Configures can0 interface to auto-start on boot (500kbps)
 #   7. Adds user to the docker group
 #   8. Configures Pi 5 to auto-boot on power (no power button needed)
 #   9. Sets up the Python virtual environment for the CAN-to-MQTT bridge
@@ -181,37 +181,21 @@ fi
 echo ""
 echo "Step 6: Configuring can0 network interface..."
 
-CAN_SERVICE="/etc/systemd/system/can0.service"
+CAN_IFACE_FILE="/etc/network/interfaces.d/can0"
 
-if [ -f "$CAN_SERVICE" ]; then
-    echo "  can0.service already exists"
+if [ -f "$CAN_IFACE_FILE" ]; then
+    echo "  can0 interface config already exists at $CAN_IFACE_FILE"
 else
-    cat > "$CAN_SERVICE" << EOF
-[Unit]
-Description=CAN bus interface can0
-Requires=sys-subsystem-net-devices-can0.device
-After=sys-subsystem-net-devices-can0.device
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/sbin/ip link set can0 type can bitrate ${CAN_BITRATE}
-ExecStart=/sbin/ip link set can0 up
-ExecStop=/sbin/ip link set can0 down
-
-[Install]
-WantedBy=multi-user.target
+    cat > "$CAN_IFACE_FILE" << EOF
+# TrailCurrent CAN bus interface
+# MCP2515 via SPI, 500kbps
+auto can0
+iface can0 inet manual
+    pre-up /sbin/ip link set can0 type can bitrate ${CAN_BITRATE}
+    up /sbin/ip link set can0 up
+    down /sbin/ip link set can0 down
 EOF
-    systemctl daemon-reload
-    systemctl enable can0.service
-    echo "  Created and enabled can0.service (can0 at ${CAN_BITRATE} bps)"
-fi
-
-# Clean up legacy ifupdown config if present (from earlier versions of this script)
-OLD_IFACE_FILE="/etc/network/interfaces.d/can0"
-if [ -f "$OLD_IFACE_FILE" ]; then
-    rm -f "$OLD_IFACE_FILE"
-    echo "  Removed legacy ifupdown config ($OLD_IFACE_FILE)"
+    echo "  Created $CAN_IFACE_FILE (can0 at ${CAN_BITRATE} bps)"
 fi
 
 # -------------------------------------------
@@ -398,7 +382,7 @@ echo "  - Docker $(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',')"
 echo "  - Docker Compose $(docker compose version 2>/dev/null | cut -d' ' -f4)"
 echo "  - SPI interface: enabled"
 echo "  - CAN overlay: mcp2515-can0 (${MCP2515_OSCILLATOR}Hz crystal, GPIO${MCP2515_INTERRUPT} interrupt)"
-echo "  - CAN service: can0.service (auto-starts can0 at ${CAN_BITRATE} bps)"
+echo "  - CAN interface: can0 auto-starts at ${CAN_BITRATE} bps"
 echo "  - User: $CURRENT_USER added to docker group"
 echo "  - Boot: auto-boot on power (Pi 5 EEPROM configured)"
 echo "  - Python venv: $VENV_PATH"
