@@ -12,7 +12,7 @@
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "mbtiles://{us-tiles}"
+      "url": "mbtiles://{map}"
     }
   },
   "glyphs": "fonts/{fontstack}/{range}.pbf",

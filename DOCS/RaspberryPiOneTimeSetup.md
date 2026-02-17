@@ -176,20 +176,29 @@ docker --version
 docker compose version
 ```
 
-> **Note:** After setup and reboot, `can0` should show `state UP`. If it shows `state DOWN` with `qdisc noop`, the `can0.service` did not start — check with `systemctl status can0.service`.
+> **Note:** After setup and reboot, `can0` should show `state UP` with `qdisc pfifo_fast`. If it shows `state DOWN` with `qdisc noop`, the `can0.service` did not start — check with `systemctl status can0.service`.
 
 If `can0` does not appear at all, the CAN hat overlay or wiring may be incorrect. If any command is not found, re-run the setup script.
+
+> **WARNING — "MCP251x didn't enter in config mode"**
+>
+> If `can0` remains `state DOWN` and `dmesg | grep -i mcp` shows:
+> ```
+> mcp251x spi0.0 can0: MCP2515 successfully initialized.
+> mcp251x spi0.0: MCP251x didn't enter in config mode
+> ```
+> This indicates a **hardware problem** with the CAN hat. The MCP2515 chip is detected over SPI but cannot be configured. Attempting to manually bring up the interface (`ip link set can0 up`) may hang the system and require a power cycle. **Do not proceed with deployment** — the hat likely has a defective solder joint or damaged component and must be replaced.
 
 ---
 
 ## Step 8: Transfer Map Tiles
 
-The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/trailcurrent/data/tileserver/us-tiles.mbtiles` then re-create as a file).
+The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/trailcurrent/data/tileserver/map.mbtiles` then re-create as a file).
 
 From your development machine:
 
 ```bash
-scp us-tiles.mbtiles <username>@<hostname>.local:~/trailcurrent/data/tileserver/us-tiles.mbtiles
+scp map.mbtiles <username>@<hostname>.local:~/trailcurrent/data/tileserver/map.mbtiles
 ```
 
 The `~/trailcurrent/data/tileserver/` directory was already created by the setup script. See [UpdatingMapTiles.md](UpdatingMapTiles.md) for how to obtain or generate this file.

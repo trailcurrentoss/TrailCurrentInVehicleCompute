@@ -37,7 +37,7 @@ docker build -t trailcurrent/trailcurrent-tile-server:latest .
 docker push trailcurrent/trailcurrent-tile-server:latest
 ```
 
-**Note:** The `fonts/` directory is git-ignored (171MB) but required at build time. The `setup.sh` script automatically copies fonts from the Product directory if needed.
+**Note:** The `fonts/` directory is git-ignored (171MB) but required at build time. The `setup.sh` script copies fonts from a local Product directory if available. If that directory doesn't exist, download pre-built PBF glyphs from [openmaptiles/fonts](https://github.com/openmaptiles/fonts/releases) and extract into `fonts/`.
 
 ## Configuration
 
@@ -62,7 +62,7 @@ docker push trailcurrent/trailcurrent-tile-server:latest
 ## Data Directory
 
 Runtime data mounts:
-- `data/us-tiles.mbtiles` - Vector tile data (not in git, volume-mounted)
+- `data/map.mbtiles` - Vector tile data (not in git, volume-mounted)
 - `data/tileserver/` - Runtime cache and temporary files
 
 ## Vector Tile Endpoints
@@ -74,7 +74,7 @@ GET /styles/{style}/style.json
 
 **Tiles:**
 ```
-GET /data/us-tiles/{z}/{x}/{y}.pbf
+GET /data/map/{z}/{x}/{y}.pbf
 ```
 
 **Glyphs (fonts):**

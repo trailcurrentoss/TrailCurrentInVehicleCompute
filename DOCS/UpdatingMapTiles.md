@@ -26,7 +26,7 @@ Many projects provide pre-generated mbtiles files for different regions:
 
 ### Steps
 1. Download a suitable mbtiles file for your region
-2. Place it in `data/tileserver/us-tiles.mbtiles`
+2. Place it in `data/tileserver/map.mbtiles`
 3. Start the application: `docker-compose up -d`
 
 ## Option 2: Generate Tiles from OpenStreetMap Data
@@ -89,7 +89,7 @@ tippecanoe \
 #### Step 4: Place in Data Directory
 ```bash
 mkdir -p data/tileserver
-cp tiles.mbtiles data/tileserver/us-tiles.mbtiles
+cp tiles.mbtiles data/tileserver/map.mbtiles
 ```
 
 ## Option 3: Using Docker for Tile Generation
@@ -105,7 +105,7 @@ docker run --rm -v $(pwd):/data mapbox/tippecanoe:latest \
   /data/input.geojson
 
 # Move to expected location
-mv tiles.mbtiles data/tileserver/us-tiles.mbtiles
+mv tiles.mbtiles data/tileserver/map.mbtiles
 ```
 
 ## Tile Characteristics
@@ -144,10 +144,10 @@ wget https://download.geofabrik.de/north-america/us/northeast-latest.osm.pbf
 tippecanoe -o new-tiles.mbtiles -z 14 -Z 6 northeast-latest.osm.pbf
 
 # Backup old tiles
-mv data/tileserver/us-tiles.mbtiles data/tileserver/us-tiles.mbtiles.backup
+mv data/tileserver/map.mbtiles data/tileserver/map.mbtiles.backup
 
 # Use new tiles
-mv new-tiles.mbtiles data/tileserver/us-tiles.mbtiles
+mv new-tiles.mbtiles data/tileserver/map.mbtiles
 
 # Restart tileserver
 docker-compose restart tileserver
@@ -174,12 +174,12 @@ docker-compose restart tileserver
 ### Tileserver Won't Start
 ```bash
 # Check if mbtiles file exists
-ls -lh data/tileserver/us-tiles.mbtiles
+ls -lh data/tileserver/map.mbtiles
 
 # Check logs
 docker-compose logs tileserver
 
-# The file MUST exist at exactly: data/tileserver/us-tiles.mbtiles
+# The file MUST exist at exactly: data/tileserver/map.mbtiles
 ```
 
 ### File Too Large

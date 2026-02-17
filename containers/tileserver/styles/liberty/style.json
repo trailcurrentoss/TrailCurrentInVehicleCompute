@@ -9,7 +9,7 @@
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "mbtiles://{us-tiles}"
+      "url": "mbtiles://{map}"
     },
     "natural_earth_shaded_relief": {
       "maxzoom": 6,

@@ -93,7 +93,7 @@ services:
   tileserver:
     image: trailcurrent/trailcurrent-tile-server:latest
     volumes:
-      - ./data/tileserver/us-tiles.mbtiles:/data/tiles/us-tiles.mbtiles:ro
+      - ./data/tileserver/map.mbtiles:/data/tiles/map.mbtiles:ro
     ports:
       - "8080:80"
     healthcheck:

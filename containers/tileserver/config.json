@@ -11,8 +11,8 @@
     "cors": true
   },
   "data": {
-    "us-tiles": {
-      "mbtiles": "us-tiles.mbtiles"
+    "map": {
+      "mbtiles": "map.mbtiles"
     }
   },
   "styles": {

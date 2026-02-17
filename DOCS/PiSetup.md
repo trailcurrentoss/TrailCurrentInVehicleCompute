@@ -197,11 +197,11 @@ The Tileserver container provides map tiles for the web UI. It requires a pre-ge
 
 ```bash
 mkdir -p data/tileserver
-cp /path/to/your/tiles.mbtiles data/tileserver/us-tiles.mbtiles
+cp /path/to/your/tiles.mbtiles data/tileserver/map.mbtiles
 ```
 
 **Requirements:**
-- File must exist at: `data/tileserver/us-tiles.mbtiles`
+- File must exist at: `data/tileserver/map.mbtiles`
 - Application will not start without this file
 - File size: Typically 50-500 MB depending on region/zoom levels
 
@@ -224,7 +224,7 @@ data/
 │   ├── ca.crt
 │   └── ca.pem
 ├── tileserver/                     # Map tiles (persist)
-│   └── us-tiles.mbtiles
+│   └── map.mbtiles
 ├── node-red/                       # Node-RED flows (persist)
 │   ├── flows.json
 │   ├── flows_cred.json
@@ -331,7 +331,7 @@ Complete these checks to ensure successful setup:
 - [ ] `.env` file created with all required values set
 - [ ] `openssl rand` commands executed and keys copied to `.env`
 - [ ] SSL certificates generated (files exist in `data/keys/`)
-- [ ] mbtiles file exists at `data/tileserver/us-tiles.mbtiles`
+- [ ] mbtiles file exists at `data/tileserver/map.mbtiles`
 - [ ] `docker compose ps` shows all containers running
 - [ ] Can access `https://<device-hostname>.local` from a browser
 - [ ] Can access `https://127.0.0.1` from the device itself
@@ -349,7 +349,7 @@ When you update the application with new code, these items are **preserved**:
 
 - ✅ `.env` - Device configuration
 - ✅ `data/keys/` - SSL certificates
-- ✅ `data/tileserver/us-tiles.mbtiles` - Map tiles
+- ✅ `data/tileserver/map.mbtiles` - Map tiles
 - ✅ `data/node-red/` - User-created flows
 - ✅ All other data in `data/` directory
 

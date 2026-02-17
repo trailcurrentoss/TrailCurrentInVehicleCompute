@@ -36,7 +36,7 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
 - Raspberry Pi with Docker installed (see [DOCS/PiSetup.md](DOCS/PiSetup.md))
 - SSH access to the Pi
 - `jq` installed (`sudo apt install jq`) — needed for OTA firmware deployment
-- Map tiles file (`us-tiles.mbtiles`) transferred separately (~25GB)
+- Map tiles file (`map.mbtiles`) transferred separately (~25GB)
 
 ### Steps
 
@@ -81,7 +81,7 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
 5. **Place the map tiles file** (first time or when updating maps):
    ```bash
    mkdir -p data/tileserver
-   # Transfer us-tiles.mbtiles to data/tileserver/
+   # Transfer map.mbtiles to data/tileserver/
    ```
 
 6. **Access the application:**
@@ -130,7 +130,7 @@ These items are **PRESERVED** and never deleted by `deploy.sh`:
   - 10-year validity — no need to regenerate on updates
 
 ### Data
-- `data/tileserver/us-tiles.mbtiles` — Map tile database (~25GB)
+- `data/tileserver/map.mbtiles` — Map tile database (~25GB)
 - `data/node-red/` — User-created Node-RED flows and credentials
 - MongoDB data volume — All application state
 

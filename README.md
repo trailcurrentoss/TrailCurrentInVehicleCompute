@@ -62,7 +62,7 @@ Before running the application locally, you must set up the environment configur
 
 5. **Set up map tiles for Tileserver** (REQUIRED - see "Map Tile Setup" section below):
    ```bash
-   # Place your map tiles file at: data/tileserver/us-tiles.mbtiles
+   # Place your map tiles file at: data/tileserver/map.mbtiles
    # The Tileserver container will not start without this file
    # See DOCS/UpdatingMapTiles.md for instructions on generating tile data
    ```
@@ -216,7 +216,7 @@ The Tileserver container provides map tiles for the web UI. It requires a pre-ge
 
 ### Required File
 
-**Location:** `data/tileserver/us-tiles.mbtiles`
+**Location:** `data/tileserver/map.mbtiles`
 
 The Tileserver container **will not start** without this file. This is a map tile database file that contains tile data for your region.
 
@@ -226,7 +226,7 @@ The Tileserver container **will not start** without this file. This is a map til
 If you have an existing mbtiles file:
 ```bash
 mkdir -p data/tileserver
-cp /path/to/your/tiles.mbtiles data/tileserver/us-tiles.mbtiles
+cp /path/to/your/tiles.mbtiles data/tileserver/map.mbtiles
 ```
 
 #### Option 2: Generate Tiles from OpenStreetMap
@@ -244,7 +244,7 @@ You can download pre-generated mbtiles from:
 ### File Structure
 ```
 data/tileserver/
-├── us-tiles.mbtiles    # Your map tile database (required)
+├── map.mbtiles    # Your map tile database (required)
 └── (any other assets if needed)
 ```
 
@@ -368,19 +368,20 @@ The Docker setup has been reorganized for clarity:
 
 ### Pre-Flight: Tileserver Setup
 
-The tileserver requires fonts to be available for building. If rebuilding the tileserver image locally, run the setup script first:
+The tileserver requires font glyphs (PBF format) for map label rendering. The `fonts/` directory is git-ignored (171MB) and must be present before building the Docker image.
+
+**Option A — Copy from existing build:**
+If you have a previous build or the Product directory available, run the setup script:
 
 ```sh
 cd containers/tileserver
 ./setup.sh
 ```
 
-This script will:
-- Check if fonts are available
-- Copy fonts from the Product directory if needed
-- Verify the setup is complete
+**Option B — Download from OpenMapTiles:**
+Download the pre-built glyphs from [openmaptiles/fonts](https://github.com/openmaptiles/fonts/releases) and extract into `containers/tileserver/fonts/`. Each font family should be its own subdirectory containing numbered `.pbf` glyph range files (e.g. `fonts/Noto Sans Regular/0-255.pbf`).
 
-**Note:** The pre-built Docker Hub image already has everything needed. Setup is only required if rebuilding the image locally.
+**Note:** The pre-built Docker Hub image already has fonts baked in. This setup is only required if rebuilding the image locally.
 
 ### Running Containers
 
@@ -414,7 +415,7 @@ The `data/` directory contains all persistent application data and configuration
   - CA certificate for browser installation
   - Valid for 10 years - no need to regenerate on updates
 
-- **Map tiles** (`data/tileserver/us-tiles.mbtiles`) - Set up once, rarely updated
+- **Map tiles** (`data/tileserver/map.mbtiles`) - Set up once, rarely updated
   - Downloaded or generated once during initial setup
   - Persists across all application updates
 
