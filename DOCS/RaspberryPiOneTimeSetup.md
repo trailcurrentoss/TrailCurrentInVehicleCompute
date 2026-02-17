@@ -83,13 +83,12 @@ Confirm by clicking **I UNDERSTAND, ERASE AND WRITE** to begin flashing.
 
 Insert the flashed SD card into the Pi's microSD slot.
 
+![TrailCurrent CAN Hat installed on Pi — bottom view](IMGS/can_hat_bottom_view.jpg)
 ---
 
 ## Step 2: Install the TrailCurrent CAN Hat
 
-With the Pi powered off, install the SD Card, and the TrailCurrent CAN Hat onto the Pi 5 GPIO header.
-
-![TrailCurrent CAN Hat installed on Pi — bottom view](IMGS/can_hat_bottom_view.jpg)
+With the Pi powered off, install the TrailCurrent CAN Hat onto the Pi 5 GPIO header.
 
 ![TrailCurrent CAN Hat installed on Pi — top view](IMGS/can_hat_top_view.jpg)
 
@@ -99,7 +98,6 @@ Connect the JST XH 4-pin cable (JST S4B-XH-SM4-TB) to the hat. The pinout from l
 ![JST XH 4-pin connector pinout](IMGS/jst_xh_4pin_pinout.png)
 
 > **WARNING:** There is no reverse polarity protection on this circuit. Incorrect wiring will damage the Pi. Double-check the pinout before applying power.
-
 ---
 
 ## Step 3: Connect to the Network
@@ -150,7 +148,7 @@ The script installs and configures everything automatically:
 
 ---
 
-## Step 7: Reboot
+## Step 6: Reboot
 
 A reboot is required for SPI and the CAN overlay to take effect:
 
@@ -160,12 +158,12 @@ sudo reboot
 
 ---
 
-## Step 8: Verify
+## Step 7: Verify
 
 After the Pi comes back up, SSH in and verify:
 
 ```bash
-# Should list /dev/spidev0.0 and /dev/spidev0.1
+# Should list /dev/spidev0.1 (spidev0.0 is claimed by the MCP2515 CAN overlay)
 ls /dev/spidev0.*
 
 # Should show the can0 interface — confirms the SPI overlay and MCP2515 driver are loaded
@@ -184,7 +182,7 @@ If `can0` does not appear at all, the CAN hat overlay or wiring may be incorrect
 
 ---
 
-## Step 9: Transfer Map Tiles
+## Step 8: Transfer Map Tiles
 
 The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/trailcurrent/data/tileserver/us-tiles.mbtiles` then re-create as a file).
 

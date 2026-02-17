@@ -32,7 +32,7 @@ set -e
 #   2. Transfer a deployment package and run deploy.sh
 #
 # Hardware assumptions:
-#   - MCP2515 CAN controller on SPI0/CE0 with 12MHz crystal
+#   - MCP2515 CAN controller on SPI0/CE0 with 12MHz crystal, 2MHz SPI clock
 #   - Interrupt on GPIO25 (default for mcp2515-can0 overlay)
 #   - If your hardware differs, edit the MCP2515 CONFIGURATION section below.
 
@@ -41,6 +41,7 @@ set -e
 # ============================================================================
 MCP2515_OSCILLATOR=12000000    # Crystal frequency in Hz (12MHz)
 MCP2515_INTERRUPT=25           # GPIO pin for MCP2515 INT (BCM numbering)
+MCP2515_SPI_FREQ=2000000       # SPI clock limit in Hz (2MHz)
 CAN_BITRATE=500000             # CAN bus bitrate in bps
 # ============================================================================
 
@@ -149,7 +150,7 @@ fi
 echo ""
 echo "Step 5: Configuring MCP2515 CAN bus overlay..."
 
-MCP2515_OVERLAY="dtoverlay=mcp2515-can0,oscillator=${MCP2515_OSCILLATOR},interrupt=${MCP2515_INTERRUPT}"
+MCP2515_OVERLAY="dtoverlay=mcp2515-can0,oscillator=${MCP2515_OSCILLATOR},interrupt=${MCP2515_INTERRUPT},spimaxfrequency=${MCP2515_SPI_FREQ}"
 
 if grep -q "dtoverlay=mcp2515" "$BOOT_CONFIG"; then
     echo "  MCP2515 overlay already configured in $BOOT_CONFIG"
@@ -195,9 +196,15 @@ After=sys-subsystem-net-devices-can0.device
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# Delay to let the MCP2515 crystal oscillator stabilize after power-on.
+# Without this, the chip fails to enter config mode (~7s into boot).
+ExecStartPre=/bin/sleep 15
 ExecStart=/sbin/ip link set can0 type can bitrate ${CAN_BITRATE}
 ExecStart=/sbin/ip link set can0 up
 ExecStop=/sbin/ip link set can0 down
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=30
 
 [Install]
 WantedBy=multi-user.target
