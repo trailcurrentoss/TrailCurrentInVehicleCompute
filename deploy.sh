@@ -236,9 +236,15 @@ if sudo systemctl is-active --quiet cantomqtt.service 2>/dev/null || sudo system
     sudo systemctl restart cantomqtt.service
     echo "  cantomqtt.service restarted"
 else
-    echo "  cantomqtt.service not installed or not enabled"
-    echo "  To install: sudo cp local_code/can-to-mqtt.service /etc/systemd/system/cantomqtt.service"
-    echo "              sudo systemctl daemon-reload && sudo systemctl enable --now cantomqtt.service"
+    echo "  cantomqtt.service not installed, installing..."
+    if [ -f "local_code/can-to-mqtt.service" ]; then
+        sudo cp local_code/can-to-mqtt.service /etc/systemd/system/cantomqtt.service
+        sudo systemctl daemon-reload
+        sudo systemctl enable --now cantomqtt.service
+        echo "  cantomqtt.service installed and started"
+    else
+        echo "  ERROR: local_code/can-to-mqtt.service not found"
+    fi
 fi
 
 # Step 7: Deploy MCU firmware (if present)
