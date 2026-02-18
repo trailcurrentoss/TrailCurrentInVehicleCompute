@@ -17,7 +17,7 @@ set -e
 # Requirements:
 #   - gh CLI (preferred) or curl
 
-GITHUB_ORG="TrailCurrent"
+GITHUB_ORG="trailcurrentoss"
 FIRMWARE_DIR="firmware/wired"
 
 # Authentication token (set via environment variable or pass as parameter)
@@ -50,9 +50,16 @@ fi
 # Device mappings: REPO_NAME|DEVICE_TYPE
 DEVICES=(
     "TrailCurrentEightButtonPanel|eight_button_panel"
-    "TrailCurrentPowerControlModule|power_control_module"
+    "TrailCurrentPowerDistributionModule|power_distribution_module"
     "TrailCurrentGnssModule|gnss_module"
     "TrailCurrentAirQualityModule|air_quality_module"
+    "TrailCurrentCabinetAndDoorSensor|cabinet_and_door_sensor"
+    "TrailCurrentElectricHeaterControl|electric_heater_control"
+    "TrailCurrentMpptCanGateway|mppt_can_gateway"
+    "TrailCurrentSevenPinTrailerMonitor|seven_pin_trailer_monitor"
+    "TrailCurrentVehicleLeveler|vehicle_leveler"
+    "TrailCurrentShuntGateway|shunt_gateway"
+    "TrailCurrentCanEspNowGateway|can_esp_now_gateway"
 )
 
 echo "=========================================="
