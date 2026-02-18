@@ -237,7 +237,7 @@ if sudo systemctl is-active --quiet cantomqtt.service 2>/dev/null || sudo system
     echo "  cantomqtt.service restarted"
 else
     echo "  cantomqtt.service not installed or not enabled"
-    echo "  To install: sudo cp local_code/can-to-mqtt.service /etc/systemd/system/"
+    echo "  To install: sudo cp local_code/can-to-mqtt.service /etc/systemd/system/cantomqtt.service"
     echo "              sudo systemctl daemon-reload && sudo systemctl enable --now cantomqtt.service"
 fi
 

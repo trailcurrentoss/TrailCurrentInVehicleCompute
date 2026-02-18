@@ -7,24 +7,32 @@ let step2ListenersAttached = false;
 
 const MCU_MODULES = [
     'air_quality_module',
-    'cabinet_door_sensor',
+    'cabinet_and_door_sensor',
+    'can_esp_now_gateway',
     'eight_button_panel',
+    'electric_heater_control',
     'gnss_module',
     'mppt_can_gateway',
-    'power_control_module',
+    'power_distribution_module',
+    'seven_pin_trailer_monitor',
     'shunt_gateway',
+    'vehicle_leveler',
     'wall_mounted_display'
 ];
 
 // Map snake_case module values to friendly display names
 const MODULE_DISPLAY_NAMES = {
     'air_quality_module': 'Air Quality Sensor',
-    'cabinet_door_sensor': 'Cabinet/Door Sensor',
+    'cabinet_and_door_sensor': 'Cabinet/Door Sensor',
+    'can_esp_now_gateway': 'CAN ESP-NOW Gateway',
     'eight_button_panel': 'Eight Button Panel',
+    'electric_heater_control': 'Electric Heater Control',
     'gnss_module': 'GPS Module',
     'mppt_can_gateway': 'MPPT CAN Gateway',
-    'power_control_module': 'Power Control Module',
+    'power_distribution_module': 'Power Distribution Module',
+    'seven_pin_trailer_monitor': 'Seven Pin Trailer Monitor',
     'shunt_gateway': 'Shunt Gateway',
+    'vehicle_leveler': 'Vehicle Leveler',
     'wall_mounted_display': 'Wall Mounted Display'
 };
 

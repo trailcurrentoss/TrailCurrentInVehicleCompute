@@ -4,12 +4,16 @@ const { ObjectId } = require('mongodb');
 
 const MCU_MODULES = [
     'air_quality_module',
-    'cabinet_door_sensor',
+    'cabinet_and_door_sensor',
+    'can_esp_now_gateway',
     'eight_button_panel',
+    'electric_heater_control',
     'gnss_module',
     'mppt_can_gateway',
-    'power_control_module',
+    'power_distribution_module',
+    'seven_pin_trailer_monitor',
     'shunt_gateway',
+    'vehicle_leveler',
     'wall_mounted_display'
 ];
 

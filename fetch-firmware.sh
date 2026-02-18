@@ -49,17 +49,18 @@ fi
 
 # Device mappings: REPO_NAME|DEVICE_TYPE
 DEVICES=(
-    "TrailCurrentEightButtonPanel|eight_button_panel"
-    "TrailCurrentPowerDistributionModule|power_distribution_module"
-    "TrailCurrentGnssModule|gnss_module"
     "TrailCurrentAirQualityModule|air_quality_module"
     "TrailCurrentCabinetAndDoorSensor|cabinet_and_door_sensor"
-    "TrailCurrentElectricHeaterControl|electric_heater_control"
-    "TrailCurrentMpptCanGateway|mppt_can_gateway"
-    "TrailCurrentSevenPinTrailerMonitor|seven_pin_trailer_monitor"
-    "TrailCurrentVehicleLeveler|vehicle_leveler"
-    "TrailCurrentShuntGateway|shunt_gateway"
     "TrailCurrentCanEspNowGateway|can_esp_now_gateway"
+    "TrailCurrentEightButtonPanel|eight_button_panel"
+    "TrailCurrentElectricHeaterControl|electric_heater_control"
+    "TrailCurrentGnssModule|gnss_module"
+    "TrailCurrentMpptCanGateway|mppt_can_gateway"
+    "TrailCurrentPowerDistributionModule|power_distribution_module"
+    "TrailCurrentSevenPinTrailerMonitor|seven_pin_trailer_monitor"
+    "TrailCurrentShuntGateway|shunt_gateway"
+    "TrailCurrentVehicleLeveler|vehicle_leveler"
+    "TrailCurrentWallMountedDisplay|wall_mounted_display"
 )
 
 echo "=========================================="
@@ -71,11 +72,11 @@ echo ""
 
 # Determine download method
 USE_GH=false
-if command -v gh &> /dev/null; then
+if command -v gh &> /dev/null && gh auth status &> /dev/null; then
     USE_GH=true
     echo "Using: gh CLI"
 else
-    echo "Using: curl (gh CLI not found)"
+    echo "Using: curl"
 fi
 echo ""
 
