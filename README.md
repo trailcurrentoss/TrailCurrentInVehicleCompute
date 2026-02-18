@@ -26,6 +26,7 @@ This gets your local development environment running. The tileserver image pulls
 ```bash
 git clone <REPO_URL>
 cd TrailCurrentInVehicleCompute
+git config core.hooksPath .githooks
 cp .env.example .env
 ```
 

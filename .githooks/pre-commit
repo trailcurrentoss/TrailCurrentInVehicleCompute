@@ -1,0 +1,77 @@
+#!/bin/bash
+# Pre-commit hook: Block AI agent configuration files from being committed.
+#
+# Activate with: git config core.hooksPath .githooks
+#
+# This hook rejects commits that include configuration files for AI coding
+# assistants. These files are workspace-local and must never enter the repo.
+
+BLOCKED_PATTERNS=(
+    # Claude
+    'CLAUDE.md'
+    'CLAUDE.MD'
+    '.claude'
+    '.claude.json'
+
+    # Cursor
+    '.cursorrules'
+    '.cursor'
+
+    # GitHub Copilot
+    '.github/copilot-instructions.md'
+    '.copilot'
+
+    # Aider
+    '.aider*'
+    '.aiderignore'
+
+    # Continue
+    '.continue'
+    '.continuerc.json'
+
+    # Codeium / Windsurf
+    '.codeium'
+    '.windsurfrules'
+
+    # Tabnine
+    '.tabnine_config'
+
+    # Sourcery
+    '.sourcery.yaml'
+
+    # Codex
+    'codex.md'
+    'CODEX.md'
+
+    # Generic
+    '.ai-instructions'
+    '.ai_instructions'
+)
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACR)
+
+blocked=()
+for file in $staged_files; do
+    for pattern in "${BLOCKED_PATTERNS[@]}"; do
+        # Match against the basename and the full path
+        basename=$(basename "$file")
+        if [[ "$basename" == $pattern ]] || [[ "$file" == $pattern ]] || [[ "$file" == */$pattern ]]; then
+            blocked+=("$file")
+            break
+        fi
+    done
+done
+
+if [ ${#blocked[@]} -gt 0 ]; then
+    echo "COMMIT BLOCKED — AI agent configuration files detected:"
+    echo ""
+    for f in "${blocked[@]}"; do
+        echo "  $f"
+    done
+    echo ""
+    echo "These files must not be committed. Remove them from staging:"
+    echo "  git reset HEAD ${blocked[*]}"
+    echo ""
+    echo "Ensure they are listed in .gitignore."
+    exit 1
+fi
