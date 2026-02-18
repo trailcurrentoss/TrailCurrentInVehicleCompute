@@ -27,6 +27,14 @@ if ! docker buildx version &> /dev/null; then
     exit 1
 fi
 
+# Verify tileserver fonts are present (committed to repo, should exist after clone)
+if [ ! -d "containers/tileserver/fonts" ] || [ -z "$(ls -A containers/tileserver/fonts/ 2>/dev/null)" ]; then
+    echo "Error: Tileserver font glyphs not found at containers/tileserver/fonts/"
+    echo "Fonts are committed to the repository. If missing, try:"
+    echo "  git checkout -- containers/tileserver/fonts/"
+    exit 1
+fi
+
 # Clean up any existing tar files from previous builds
 if [ -d "images" ] && [ "$(ls -A images/*.tar 2>/dev/null)" ]; then
     echo "Removing old tar files from previous build..."

@@ -32,7 +32,6 @@ containers/nodejs/node_modules
 containers/tileserver/data/
 containers/tileserver/tiles
 containers/tileserver/generate/
-containers/tileserver/fonts
 **/*.FCBak*
 EDA/**/*.zip
 images/*
@@ -52,3 +51,4 @@ build_*.log
 .idea/
 .vscode/
 CLAUDE.md
+CLAUDE.MD

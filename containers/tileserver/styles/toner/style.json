@@ -1027,7 +1027,7 @@
         "symbol-spacing": 200,
         "text-field": "{name:latin} {name:nonlatin}",
         "text-font": [
-          "Noto Sans Bold Italic"
+          "Noto Sans Bold"
         ],
         "text-max-width": 9,
         "text-rotation-alignment": "map",

@@ -1,2 +1,4 @@
-# Font files (built into Docker image, not needed in repo)
-fonts/
+# Runtime data and generated files
+data/
+tiles/
+generate/

@@ -1,4 +1,4 @@
-# Tile server using tileserver-gl (full version for raster tile rendering)
+# TrailCurrent custom tile server — serves vector tiles with project styles and fonts
 FROM maptiler/tileserver-gl:latest
 
 # Copy configuration
