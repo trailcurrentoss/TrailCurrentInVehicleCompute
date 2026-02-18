@@ -19,7 +19,7 @@
 
 ## Development Setup
 
-This gets your local development environment running. The tileserver image pulls from Docker Hub with all styles and fonts pre-built. Other services build from the local Dockerfiles.
+This gets your local development environment running with hot-reload and debugging enabled. All services build from local Dockerfiles for the host platform.
 
 ### Step 1: Clone and configure environment
 
@@ -27,6 +27,7 @@ This gets your local development environment running. The tileserver image pulls
 git clone <REPO_URL>
 cd TrailCurrentInVehicleCompute
 git config core.hooksPath .githooks
+docker buildx use default
 cp .env.example .env
 ```
 
@@ -76,11 +77,18 @@ To generate tiles from OpenStreetMap data, use the **PbfTileConverter** utility:
 
 Or copy `map.mbtiles` from an existing team member's machine.
 
-### Step 6: Start the application
+### Step 6: Build and start in development mode
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
+
+The `--build` flag ensures all images are built from local Dockerfiles for your host platform. Development mode enables:
+- Hot-reload for frontend and backend code changes
+- Node.js debug port (9229) for VSCode debugger attachment
+- MongoDB accessible on localhost:27017
+- Node-RED accessible on localhost:1880
+- Tileserver styles hot-reload
 
 Containers will automatically:
 - Generate the bcrypt hash for Node-RED from your plain password
@@ -258,11 +266,11 @@ Certificates are automatically protected by `.gitignore`. Never commit them to v
 ### Running Containers
 
 ```bash
-# Production mode
-docker compose up -d
+# Development mode (hot-reload, debug ports) — always use --build to ensure local images
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
-# Development mode (hot-reload, debug ports)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Production mode (after verification)
+docker compose up -d --build
 ```
 
 ### Docker Networking
@@ -288,8 +296,7 @@ The `data/` directory contains all persistent application data:
 **Updating the Application (No Data Loss):**
 ```bash
 git pull
-docker compose build
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 # Certificates, .env, map tiles, and Node-RED flows are preserved
 ```
 

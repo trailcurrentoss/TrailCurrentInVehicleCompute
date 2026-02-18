@@ -34,6 +34,13 @@ if ! docker buildx version &> /dev/null; then
     exit 1
 fi
 
+# Use a dedicated builder for multi-arch builds (never changes the active builder)
+BUILDER_NAME="trailcurrent-multiarch"
+if ! docker buildx inspect "$BUILDER_NAME" &>/dev/null; then
+    echo "Creating multi-arch builder: $BUILDER_NAME"
+    docker buildx create --name "$BUILDER_NAME" --platform linux/amd64,linux/arm64
+fi
+
 # Verify user is logged in to Docker Hub
 if ! docker info | grep -q "Username:"; then
     echo "Error: Not logged in to Docker Hub"
@@ -102,6 +109,7 @@ for IMAGE in "${IMAGES[@]}"; do
     # Build and push with buildx (multi-architecture)
     # Only tag as :latest for testing
     docker buildx build \
+        --builder "$BUILDER_NAME" \
         --platform "$PLATFORMS" \
         -f "$DOCKERFILE" \
         -t "$REGISTRY/$DOCKER_USERNAME/trailcurrent-$IMAGE_NAME:latest" \

@@ -92,6 +92,9 @@ services:
     restart: unless-stopped
   tileserver:
     image: trailcurrent/trailcurrent-tile-server:latest
+    build:
+      context: ./containers/tileserver
+      dockerfile: Dockerfile
     volumes:
       - ./data/tileserver/map.mbtiles:/data/tiles/map.mbtiles:ro
     ports:

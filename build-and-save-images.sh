@@ -27,6 +27,13 @@ if ! docker buildx version &> /dev/null; then
     exit 1
 fi
 
+# Use a dedicated builder for cross-platform builds (never changes the active builder)
+BUILDER_NAME="trailcurrent-arm64"
+if ! docker buildx inspect "$BUILDER_NAME" &>/dev/null; then
+    echo "Creating cross-platform builder: $BUILDER_NAME"
+    docker buildx create --name "$BUILDER_NAME" --platform linux/amd64,linux/arm64
+fi
+
 # Verify tileserver fonts are present (committed to repo, should exist after clone)
 if [ ! -d "containers/tileserver/fonts" ] || [ -z "$(ls -A containers/tileserver/fonts/ 2>/dev/null)" ]; then
     echo "Error: Tileserver font glyphs not found at containers/tileserver/fonts/"
@@ -70,48 +77,39 @@ for service_info in "${SERVICES[@]}"; do
     echo "  Context: $build_dir"
     echo "=========================================="
 
-    # Build for ARM64
-    if docker buildx build --platform linux/arm64 \
+    # Build for ARM64 and write directly to tar (does NOT load into local Docker)
+    if docker buildx build --builder "$BUILDER_NAME" --platform linux/arm64 \
         -t "$image_tag:latest" \
-        --output type=docker \
+        --output "type=docker,dest=$tar_file" \
         "$build_dir/" > /tmp/build.log 2>&1; then
-        echo "  Built $image_tag"
+        SIZE=$(du -h "$tar_file" | cut -f1)
+        echo "  Built and saved to $tar_file ($SIZE)"
     else
         echo "  Failed to build $image_tag"
         cat /tmp/build.log
         exit 1
     fi
 
-    # Save to tar file
-    if docker save "$image_tag:latest" -o "$tar_file"; then
-        SIZE=$(du -h "$tar_file" | cut -f1)
-        echo "  Saved to $tar_file ($SIZE)"
-    else
-        echo "  Failed to save $image_tag to tar"
-        exit 1
-    fi
-
     echo ""
 done
 
-# Pull and save MongoDB for truly offline deployment
+# Save MongoDB for truly offline deployment (does NOT load into local Docker)
 echo "=========================================="
-echo "Pulling mongo:7 (linux/arm64)..."
+echo "Saving mongo:7 (linux/arm64)..."
 echo "=========================================="
 
-if docker pull --platform linux/arm64 mongo:7 > /tmp/build.log 2>&1; then
-    echo "  Pulled mongo:7"
-else
-    echo "  Failed to pull mongo:7"
-    cat /tmp/build.log
-    exit 1
-fi
-
-if docker save mongo:7 -o "images/mongodb.tar"; then
+if docker buildx build --builder "$BUILDER_NAME" --platform linux/arm64 \
+    -t mongo:7 \
+    --output "type=docker,dest=images/mongodb.tar" \
+    - <<'DOCKERFILE' > /tmp/build.log 2>&1
+FROM mongo:7
+DOCKERFILE
+then
     SIZE=$(du -h "images/mongodb.tar" | cut -f1)
     echo "  Saved to images/mongodb.tar ($SIZE)"
 else
-    echo "  Failed to save mongo:7 to tar"
+    echo "  Failed to save mongo:7"
+    cat /tmp/build.log
     exit 1
 fi
 

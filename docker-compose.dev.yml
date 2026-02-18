@@ -32,8 +32,3 @@ services:
   node-red:
     ports:
       - "1880:1880"
-
-  tileserver:
-    # Mount styles directory for hot-reload map style changes
-    volumes:
-      - ./containers/tileserver/styles:/data/styles
