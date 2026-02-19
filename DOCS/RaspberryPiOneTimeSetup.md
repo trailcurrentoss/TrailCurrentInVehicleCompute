@@ -235,5 +235,4 @@ On first run, `deploy.sh` will prompt you to configure `.env` with your credenti
 | Document | Purpose |
 |----------|---------|
 | [PI_DEPLOYMENT.md](../PI_DEPLOYMENT.md) | Deploying and updating the application |
-| [PiSetup.md](PiSetup.md) | Application-level configuration (env, certs, tiles) |
 | [UpdatingMapTiles.md](UpdatingMapTiles.md) | Generating and updating map tile data |

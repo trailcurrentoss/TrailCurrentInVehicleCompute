@@ -7,8 +7,7 @@
 | Set up a development environment | [Development Setup](#development-setup) below |
 | Build a deployment package | [Building Deployment Packages](#building-deployment-packages) below |
 | Set up a new Raspberry Pi | [DOCS/RaspberryPiOneTimeSetup.md](DOCS/RaspberryPiOneTimeSetup.md) |
-| Deploy an update to a Pi | [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md) |
-| Configure a Pi after first OS setup | [DOCS/PiSetup.md](DOCS/PiSetup.md) |
+| Deploy or update a Pi | [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md) |
 | Set up Node-RED flows | [Node-RED Setup](#node-red-setup) below |
 
 ## Prerequisites
