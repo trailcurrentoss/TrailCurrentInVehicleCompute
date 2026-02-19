@@ -139,6 +139,14 @@ fi
 
 echo "  Prerequisites OK"
 
+# Load starter Node-RED flow on first-time setup (won't overwrite existing flows)
+if [ ! -f "data/node-red/flows.json" ] && [ -f "config/node-red/starter-flow.json" ]; then
+    echo "  Loading starter Node-RED flow..."
+    mkdir -p data/node-red
+    cp config/node-red/starter-flow.json data/node-red/flows.json
+    echo "  Starter flow loaded. After startup, open Node-RED and configure MQTT credentials."
+fi
+
 # Step 1: Stop existing services
 echo ""
 echo "Step 1: Stopping existing services..."

@@ -1,0 +1,1771 @@
+[
+    {
+        "id": "891127dbdba7381a",
+        "type": "tab",
+        "label": "CAN Bus Bridge",
+        "disabled": false,
+        "info": "Bridges CAN bus messages to local MQTT topics for the TrailCurrent PWA.\n\nINBOUND: Subscribes to can/inbound, routes by CAN identifier, parses data,\nand publishes to local/* topics (lights, air quality, GPS).\n\nOUTBOUND: Subscribes to local/lights/*/command from the PWA and sends\nCAN toggle/brightness messages to can/outbound.\n\nSETUP:\n1. Double-click any MQTT node, then click the pencil icon next to 'Local MQTT Broker'\n2. Go to the Security tab and enter your MQTT username and password (from .env file)\n3. Click Update, then click Deploy (red button, top right)",
+        "env": []
+    },
+    {
+        "id": "eacd65176013d427",
+        "type": "tls-config",
+        "name": "Local TLS",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "ca.pem",
+        "servername": "",
+        "verifyservercert": false,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "116a81d49537d25e",
+        "type": "mqtt-broker",
+        "name": "Local MQTT Broker",
+        "broker": "mosquitto",
+        "port": "8883",
+        "tls": "eacd65176013d427",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "a1b2c3d4e5f60001",
+        "type": "comment",
+        "z": "891127dbdba7381a",
+        "name": "SETUP: Configure MQTT credentials in the broker node before deploying",
+        "info": "After importing this flow:\n1. Double-click any MQTT node (e.g. 'CAN Inbound')\n2. Click the pencil icon next to 'Local MQTT Broker'\n3. Go to the Security tab\n4. Enter your MQTT username and password (same values as MQTT_USERNAME / MQTT_PASSWORD in your .env file)\n5. Click Update, then Deploy\n\nThe broker connects to the Mosquitto container via Docker internal DNS (mosquitto:8883).\nTLS uses the self-signed CA certificate mounted at /data/ca.pem.",
+        "x": 310,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "490ac1613f8b04b3",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "CAN Inbound",
+        "topic": "can/inbound",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 640,
+        "wires": [
+            [
+                "4b5b94195dcadfbf"
+            ]
+        ]
+    },
+    {
+        "id": "a18c8e9eefccbfb9",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 440,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "4b5b94195dcadfbf",
+        "type": "switch",
+        "z": "891127dbdba7381a",
+        "name": "Route by CAN ID",
+        "property": "payload.identifier",
+        "propertyType": "msg",
+        "rules": [
+            { "t": "eq", "v": "0x01b", "vt": "str" },
+            { "t": "eq", "v": "0x01f", "vt": "str" },
+            { "t": "eq", "v": "0x006", "vt": "str" },
+            { "t": "eq", "v": "0x007", "vt": "str" },
+            { "t": "eq", "v": "0x008", "vt": "str" },
+            { "t": "eq", "v": "0x009", "vt": "str" }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 6,
+        "x": 880,
+        "y": 640,
+        "wires": [
+            [
+                "f67b69c1d8874a63",
+                "15b877cc4f54daf7",
+                "b0a8615abab7e282",
+                "f1c162d7b335b097",
+                "7167ed4b94dc86c0",
+                "76a9499bf8036455",
+                "3f355e865786e847",
+                "376fcfe1ab59b49f"
+            ],
+            [
+                "5c28db6b4f958261"
+            ],
+            [
+                "973a48320d94db99"
+            ],
+            [
+                "24f48e2d777db09e"
+            ],
+            [
+                "468dd54462cb8e78"
+            ],
+            [
+                "b06c10960e1b4497"
+            ]
+        ]
+    },
+    {
+        "id": "f67b69c1d8874a63",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light1StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[0] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[0];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 60,
+        "wires": [
+            [
+                "16e6f2076f16f22a"
+            ]
+        ]
+    },
+    {
+        "id": "15b877cc4f54daf7",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light2StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[1] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[1];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 140,
+        "wires": [
+            [
+                "f44e66a256886e10"
+            ]
+        ]
+    },
+    {
+        "id": "b0a8615abab7e282",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light3StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[2] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[2];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 220,
+        "wires": [
+            [
+                "8ebf073684f3aadf"
+            ]
+        ]
+    },
+    {
+        "id": "f1c162d7b335b097",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light4StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[3] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[3];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 280,
+        "wires": [
+            [
+                "07822a72d9b3233b"
+            ]
+        ]
+    },
+    {
+        "id": "7167ed4b94dc86c0",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light5StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[4] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[4];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 360,
+        "wires": [
+            [
+                "960a8363f6a68fca"
+            ]
+        ]
+    },
+    {
+        "id": "76a9499bf8036455",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light6StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[5] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[5];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 460,
+        "wires": [
+            [
+                "b4ea933661d7a80a"
+            ]
+        ]
+    },
+    {
+        "id": "3f355e865786e847",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light7StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[6] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[6];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 540,
+        "wires": [
+            [
+                "81c6dccf9e32680e"
+            ]
+        ]
+    },
+    {
+        "id": "376fcfe1ab59b49f",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Light8StatusParse",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {};\nif (decoded[7] > 0) {\n    msg.payload.state = 1;\n} else {\n    msg.payload.state = 0;\n}\nmsg.payload.brightness = decoded[7];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 620,
+        "wires": [
+            [
+                "2b67cf2ae3a92d80"
+            ]
+        ]
+    },
+    {
+        "id": "16e6f2076f16f22a",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 60,
+        "wires": [
+            [
+                "3849e6a6d72d427b"
+            ]
+        ]
+    },
+    {
+        "id": "f44e66a256886e10",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 140,
+        "wires": [
+            [
+                "823b7c8e716a46b9"
+            ]
+        ]
+    },
+    {
+        "id": "8ebf073684f3aadf",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 220,
+        "wires": [
+            [
+                "ceb32dd2f7769810"
+            ]
+        ]
+    },
+    {
+        "id": "07822a72d9b3233b",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 280,
+        "wires": [
+            [
+                "d54a8f1367bdb4eb"
+            ]
+        ]
+    },
+    {
+        "id": "960a8363f6a68fca",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 360,
+        "wires": [
+            [
+                "4fae62c01c30674b"
+            ]
+        ]
+    },
+    {
+        "id": "b4ea933661d7a80a",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 460,
+        "wires": [
+            [
+                "b03d78a631588905"
+            ]
+        ]
+    },
+    {
+        "id": "81c6dccf9e32680e",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 540,
+        "wires": [
+            [
+                "b5292b869b7f2b6d"
+            ]
+        ]
+    },
+    {
+        "id": "2b67cf2ae3a92d80",
+        "type": "delay",
+        "z": "891127dbdba7381a",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1360,
+        "y": 620,
+        "wires": [
+            [
+                "9f36e0717f033b9f"
+            ]
+        ]
+    },
+    {
+        "id": "3849e6a6d72d427b",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 1 Status",
+        "topic": "local/lights/1/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "823b7c8e716a46b9",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 2 Status",
+        "topic": "local/lights/2/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "ceb32dd2f7769810",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 3 Status",
+        "topic": "local/lights/3/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "d54a8f1367bdb4eb",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 4 Status",
+        "topic": "local/lights/4/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "4fae62c01c30674b",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 5 Status",
+        "topic": "local/lights/5/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "b03d78a631588905",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 6 Status",
+        "topic": "local/lights/6/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "b5292b869b7f2b6d",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 7 Status",
+        "topic": "local/lights/7/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "9f36e0717f033b9f",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Light 8 Status",
+        "topic": "local/lights/8/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "5c28db6b4f958261",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "ParseTempAndHumidity",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nlet humdity = (decoded[2] << 8) | decoded[3];\nlet outboundMessage = {\n    tempInC: decoded[0],\n    tempInF: decoded[1],\n    humidity: parseFloat(humdity/100)\n}\n\nmsg.payload = outboundMessage;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 700,
+        "wires": [
+            [
+                "881c4fc97d7d24ca"
+            ]
+        ]
+    },
+    {
+        "id": "973a48320d94db99",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "ParseDateTime",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\n    \nlet outboundMessage = {\n    year: (decoded[0] << 8) | decoded[1],\n    month: decoded[2],\n    day: decoded[3],\n    hour: decoded[4],\n    minute: decoded[5],\n    second: decoded[6]\n}\n\nmsg.payload = `${outboundMessage.month}/${outboundMessage.day}/${outboundMessage.year} ${outboundMessage.hour}:${outboundMessage.minute}:${outboundMessage.second}`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 780,
+        "wires": [
+            [
+                "03f4700449053fa4"
+            ]
+        ]
+    },
+    {
+        "id": "24f48e2d777db09e",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "ParseGnssStats",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\n    \nlet outboundMessage = {\n    numberOfSatellites: decoded[0],\n    speedOverGround: (decoded[1] << 8) | decoded[2],\n    courseOverGround: (decoded[3] << 8) | decoded[4],\n    gnssMode: decoded[5]\n}\n\nmsg.payload = outboundMessage;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 860,
+        "wires": [
+            [
+                "e55b88cc5bac5f47"
+            ]
+        ]
+    },
+    {
+        "id": "468dd54462cb8e78",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "ParseGnssAltitude",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\n// Combine bytes into 32-bit value (big-endian)\nconst scaled = (decoded[0] << 24) |\n        (decoded[1] << 16) |\n        (decoded[2] << 8) |\n        decoded[3];\nconst unsignedScaled = scaled >>> 0; // Force unsigned\nconst altitudeInMeters = unsignedScaled / 100.0;\nlet output = {\n    altitudeInMeters: altitudeInMeters,\n    altitudeFeet:Math.round((altitudeInMeters * 3.28084))\n}\nmsg.payload = output;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 940,
+        "wires": [
+            [
+                "fa435a16cba22dc1"
+            ]
+        ]
+    },
+    {
+        "id": "b06c10960e1b4497",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "ParseGnssLatLon",
+        "func": "// Convert bit arrays to bytes\nlet decoded = msg.payload.data.map(bitArray => {\n    let byteValue;\n    if (bitArray.length === 8) { // 8-bit unsigned integer\n        byteValue = Number.parseInt(bitArray.join(''), 2);\n    } else if (bitArray.length === 16) { // 16-bit signed integer\n        let signBit = bitArray[0];\n        const bits = bitArray.slice(1).join('');\n        byteValue = (Number.parseInt(bits, 2) ^ 32768) * Math.pow(-1, signBit);\n    } else if (bitArray.length === 32) { // 32-bit signed integer\n        let signBit = bitArray[0];\n        const bits = bitArray.slice(1).join('');\n        byteValue = Number.parseInt(bits, 2) * Math.pow(-1, signBit);\n    }\n    return byteValue;\n});\n\n// Decode latitude (bytes 0-3)\nconst latBytes = decoded.slice(0, 4);\nconst latSign = (latBytes[0] === 1) ? -1 : 1;\nconst latitude = ((latBytes[1] << 16) | (latBytes[2] << 8) | latBytes[3]) / 10000.0 * latSign;\n\n// Decode longitude (bytes 4-7)\nconst lonBytes = decoded.slice(4, 8);\nconst lonSign = (lonBytes[0] === 1) ? -1 : 1;\nconst longitude = ((lonBytes[1] << 16) | (lonBytes[2] << 8) | lonBytes[3]) / 10000.0 * lonSign;\n\nmsg.payload.latitude = latitude;\nmsg.payload.longitude = longitude;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 1020,
+        "wires": [
+            [
+                "98c69cfcca7fcb89"
+            ]
+        ]
+    },
+    {
+        "id": "881c4fc97d7d24ca",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "Temp/Humidity",
+        "topic": "local/airquality/temphumid",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1360,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "03f4700449053fa4",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "GPS Time",
+        "topic": "local/gps/time",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1360,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "e55b88cc5bac5f47",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "GPS Details",
+        "topic": "local/gps/details",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1360,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "fa435a16cba22dc1",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "GPS Altitude",
+        "topic": "local/gps/alt",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1360,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "98c69cfcca7fcb89",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "GPS LatLon",
+        "topic": "local/gps/latlon",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1360,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "a1b2c3d4e5f60002",
+        "type": "comment",
+        "z": "891127dbdba7381a",
+        "name": "PWA Light Commands (local/lights/N/command -> CAN outbound)",
+        "info": "These nodes receive light toggle commands from the PWA backend\nand convert them to CAN bus messages sent to can/outbound.\n\nThe PWA publishes to local/lights/{id}/command when a user taps a light button.",
+        "x": 280,
+        "y": 1220,
+        "wires": []
+    },
+    {
+        "id": "ac85d2174170e9b1",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light1Command",
+        "topic": "local/lights/1/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1260,
+        "wires": [
+            [
+                "58e0d2f877a1ccdd"
+            ]
+        ]
+    },
+    {
+        "id": "58e0d2f877a1ccdd",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device01Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,0,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1260,
+        "wires": [
+            [
+                "e4d777f9dc61b7f7"
+            ]
+        ]
+    },
+    {
+        "id": "e4d777f9dc61b7f7",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1260,
+        "wires": []
+    },
+    {
+        "id": "a8dc05a664315b26",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light2Command",
+        "topic": "local/lights/2/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1320,
+        "wires": [
+            [
+                "afa07dd62b6eb691"
+            ]
+        ]
+    },
+    {
+        "id": "afa07dd62b6eb691",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device02Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,0,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1320,
+        "wires": [
+            [
+                "3d37bdba1ae38c08"
+            ]
+        ]
+    },
+    {
+        "id": "3d37bdba1ae38c08",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1320,
+        "wires": []
+    },
+    {
+        "id": "28b76ff15fb07b39",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light3Command",
+        "topic": "local/lights/3/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1380,
+        "wires": [
+            [
+                "a8a7951607dd19ca"
+            ]
+        ]
+    },
+    {
+        "id": "a8a7951607dd19ca",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device03Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,1,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1380,
+        "wires": [
+            [
+                "58228fc60e59160c"
+            ]
+        ]
+    },
+    {
+        "id": "58228fc60e59160c",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "0a2a50da655d20fc",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light4Command",
+        "topic": "local/lights/4/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1440,
+        "wires": [
+            [
+                "fd8296aa6e542fc1"
+            ]
+        ]
+    },
+    {
+        "id": "fd8296aa6e542fc1",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device04Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,1,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1440,
+        "wires": [
+            [
+                "5f0fdff435288c7e"
+            ]
+        ]
+    },
+    {
+        "id": "5f0fdff435288c7e",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1440,
+        "wires": []
+    },
+    {
+        "id": "dabd5193c95611eb",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light5Command",
+        "topic": "local/lights/5/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1500,
+        "wires": [
+            [
+                "17d39b6448e55f6e"
+            ]
+        ]
+    },
+    {
+        "id": "17d39b6448e55f6e",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device05Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,0,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1500,
+        "wires": [
+            [
+                "53688364fe13b359"
+            ]
+        ]
+    },
+    {
+        "id": "53688364fe13b359",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1500,
+        "wires": []
+    },
+    {
+        "id": "a0132355cb589299",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light6Command",
+        "topic": "local/lights/6/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1560,
+        "wires": [
+            [
+                "95e348166c67ebc1"
+            ]
+        ]
+    },
+    {
+        "id": "95e348166c67ebc1",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device06Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,0,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1560,
+        "wires": [
+            [
+                "daab310a0dadd8f6"
+            ]
+        ]
+    },
+    {
+        "id": "daab310a0dadd8f6",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1560,
+        "wires": []
+    },
+    {
+        "id": "91933111ada45cca",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light7Command",
+        "topic": "local/lights/7/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1620,
+        "wires": [
+            [
+                "0d9680cb34c66fb9"
+            ]
+        ]
+    },
+    {
+        "id": "0d9680cb34c66fb9",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device07Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,1,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1620,
+        "wires": [
+            [
+                "ebca4c7807fc51b5"
+            ]
+        ]
+    },
+    {
+        "id": "ebca4c7807fc51b5",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1620,
+        "wires": []
+    },
+    {
+        "id": "5114799e6bdfc538",
+        "type": "mqtt in",
+        "z": "891127dbdba7381a",
+        "name": "Light8Command",
+        "topic": "local/lights/8/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1680,
+        "wires": [
+            [
+                "4f0ad129c2a744b6"
+            ]
+        ]
+    },
+    {
+        "id": "4f0ad129c2a744b6",
+        "type": "function",
+        "z": "891127dbdba7381a",
+        "name": "Pdm01Device08Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,1,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1680,
+        "wires": [
+            [
+                "974b21fe734a5541"
+            ]
+        ]
+    },
+    {
+        "id": "974b21fe734a5541",
+        "type": "mqtt out",
+        "z": "891127dbdba7381a",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 1680,
+        "wires": []
+    },
+    {
+        "id": "a1b2c3d4e5f60003",
+        "type": "comment",
+        "z": "891127dbdba7381a",
+        "name": "Test Controls: Toggle Lights, Brightness, All On/Off",
+        "info": "Click the button on any inject node to send a test CAN message.\nThese are for manual testing in the Node-RED editor.",
+        "x": 240,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "12b42ab18a35e224",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 1",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,0,0,0]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 420,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "58bce8b36a4180c9",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 2",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 460,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "772f188ae8c296c0",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 3",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,0,1,0]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 500,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "4e5eeab99be69836",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 4",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,0,1,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 540,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "355f0702fc186804",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 5",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,1,0,0]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 580,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "969fa44132572ca2",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 6",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,1,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 620,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "5b5b8717359cc472",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 7",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,1,1,0]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 660,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "2380cba1e13f9e2b",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Toggle Light 8",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":1,\"data\":[[0,0,0,0,0,1,1,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 700,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "ebbb127865ca15a2",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "All Off",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":2,\"data\":[[0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 740,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "9e946f83621bb0a0",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "All On",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x018\",\"data_length_code\":2,\"data\":[[0,0,0,0,1,0,0,1],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 780,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "3052a52a678d863a",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness01 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 820,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "489d0d8162bdf4ce",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness02 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 860,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "fb4f6fef84fdd8c1",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness03 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 900,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "a7f5f54d6c43b8df",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness04 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 940,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "d19ae8ff06740472",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness05 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 980,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "540ee64f7f82666e",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness06 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,1,0,1],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1020,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "9e0714b05a49863c",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness07 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,1,1,0],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1060,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    },
+    {
+        "id": "3c9f0144a89aa8ae",
+        "type": "inject",
+        "z": "891127dbdba7381a",
+        "name": "Brightness08 Dim",
+        "props": [
+            { "p": "topic", "vt": "str" },
+            { "p": "payload" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "can/outbound",
+        "payload": "{\"identifier\":\"0x015\",\"data_length_code\":2,\"data\":[[0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,1]],\"extd\":false,\"rtr\":false,\"ss\":0,\"self\":0}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1100,
+        "wires": [
+            [
+                "a18c8e9eefccbfb9"
+            ]
+        ]
+    }
+]

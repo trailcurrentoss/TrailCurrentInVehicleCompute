@@ -80,6 +80,7 @@ services:
     volumes:
       - ./data/node-red:/data
       - ./config/node-red/settings.js:/data/settings.js
+      - ./data/keys/ca.pem:/data/ca.pem:ro
     depends_on:
       - mosquitto
     environment:

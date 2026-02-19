@@ -9,6 +9,7 @@
 | Set up a new Raspberry Pi | [DOCS/RaspberryPiOneTimeSetup.md](DOCS/RaspberryPiOneTimeSetup.md) |
 | Deploy an update to a Pi | [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md) |
 | Configure a Pi after first OS setup | [DOCS/PiSetup.md](DOCS/PiSetup.md) |
+| Set up Node-RED flows | [Node-RED Setup](#node-red-setup) below |
 
 ## Prerequisites
 
@@ -168,7 +169,7 @@ containers/          Dockerfiles for each service
   tileserver/        Custom tile server (styles, fonts, sprites)
 config/              Version-controlled service configurations
   mosquitto/         mosquitto.conf
-  node-red/          settings.js
+  node-red/          settings.js, starter-flow.json
 data/                Runtime data (gitignored)
   keys/              TLS certificates
   tileserver/        map.mbtiles
@@ -299,6 +300,44 @@ git pull
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 # Certificates, .env, map tiles, and Node-RED flows are preserved
 ```
+
+---
+
+## Node-RED Setup
+
+Node-RED bridges CAN bus messages to local MQTT topics that the PWA consumes. A starter flow is included at `config/node-red/starter-flow.json`.
+
+### What the Starter Flow Does
+
+- **Inbound:** Subscribes to `can/inbound`, routes by CAN identifier, and publishes parsed data to `local/*` topics:
+  - Light status (8 channels) → `local/lights/{1-8}/status`
+  - Temperature & humidity → `local/airquality/temphumid`
+  - GPS coordinates, altitude, details, time → `local/gps/*`
+- **Outbound:** Subscribes to `local/lights/{1-8}/command` (from PWA light toggles) and sends CAN messages to `can/outbound`
+- **Test controls:** Manual inject nodes for toggling lights, setting brightness, and all-on/all-off
+
+### Automatic Loading (First Deploy)
+
+On the first run of `deploy.sh`, the starter flow is automatically copied to `data/node-red/flows.json` if no existing flows are found. Existing installations are not affected.
+
+### Manual Import (Existing Installations)
+
+1. Open Node-RED at `https://<hostname>:8443`
+2. Click the hamburger menu (top right) → **Import**
+3. Select **Upload** and choose `config/node-red/starter-flow.json`
+4. Click **Import**
+
+### Configure MQTT Credentials
+
+After importing, Node-RED needs MQTT credentials to connect to Mosquitto:
+
+1. Double-click any MQTT node (e.g. "CAN Inbound")
+2. Click the pencil icon next to **Local MQTT Broker**
+3. Go to the **Security** tab
+4. Enter your `MQTT_USERNAME` and `MQTT_PASSWORD` (same values from `.env`)
+5. Click **Update**, then click the red **Deploy** button
+
+The broker is pre-configured to connect to `mosquitto:8883` via Docker internal DNS with TLS.
 
 ---
 
