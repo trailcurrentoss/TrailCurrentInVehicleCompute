@@ -508,7 +508,8 @@ export const wizardPage = {
         systemConfig.mcu_modules.push({
             type: moduleType,
             name: moduleName,
-            hostname: moduleHostname
+            hostname: moduleHostname,
+            enabled: true
         });
 
         // Re-render step 2 to show the new module

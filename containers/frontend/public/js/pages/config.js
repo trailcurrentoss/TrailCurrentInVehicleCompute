@@ -655,6 +655,7 @@ export const configPage = {
                     type: type,
                     name: name,
                     hostname: hostname,
+                    enabled: true,
                     config: config
                 });
                 this.showMessage('Module created successfully', 'success');

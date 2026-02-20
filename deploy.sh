@@ -266,14 +266,85 @@ else
     fi
 fi
 
+# Wait for cantomqtt to initialize (connect to MQTT broker and CAN bus)
+echo "  Waiting for CAN-to-MQTT bridge to initialize..."
+sleep 5
+
+# Step 6.5: Provision WiFi credentials to MCUs (needed for OTA)
+echo ""
+echo "Step 6.5: Provisioning WiFi credentials to MCUs..."
+if [ -f "local_code/provision_wifi_mqtt.py" ]; then
+    BACKEND_CONTAINER=$(docker compose ps -q backend 2>/dev/null)
+    if [ -n "$BACKEND_CONTAINER" ]; then
+        # Query MongoDB and decrypt WiFi password inside the backend container
+        # (it has Node.js crypto, ENCRYPTION_KEY env var, and mongodb driver)
+        WIFI_CREDS=$(docker exec "$BACKEND_CONTAINER" node -e '
+            const { MongoClient } = require("mongodb");
+            const crypto = require("crypto");
+            async function main() {
+                const client = await MongoClient.connect("mongodb://mongodb:27017");
+                const config = await client.db("trailcurrent").collection("system_config").findOne({_id: "main"});
+                await client.close();
+                if (!config || !config.wifi_ssid || !config.wifi_password_encrypted || !config.wifi_password_iv) {
+                    process.exit(1);
+                }
+                const key = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+                const iv = Buffer.from(config.wifi_password_iv, "hex");
+                const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+                let password = decipher.update(config.wifi_password_encrypted, "hex", "utf8");
+                password += decipher.final("utf8");
+                console.log(config.wifi_ssid);
+                console.log(password);
+            }
+            main().catch(() => process.exit(1));
+        ' 2>/dev/null)
+
+        if [ $? -eq 0 ] && [ -n "$WIFI_CREDS" ]; then
+            WIFI_SSID=$(echo "$WIFI_CREDS" | head -n 1)
+            WIFI_PASSWORD=$(echo "$WIFI_CREDS" | tail -n 1)
+
+            if [ -n "$WIFI_SSID" ] && [ -n "$WIFI_PASSWORD" ]; then
+                echo "  Sending WiFi credentials to MCUs (SSID: $WIFI_SSID)..."
+                "$VENV_PATH/bin/python3" local_code/provision_wifi_mqtt.py "$WIFI_SSID" "$WIFI_PASSWORD"
+                if [ $? -eq 0 ]; then
+                    echo "  WiFi credentials provisioned successfully"
+                    # Brief wait for MCUs to store credentials in NVS
+                    sleep 2
+                else
+                    echo "  Warning: Failed to provision WiFi credentials"
+                fi
+            else
+                echo "  Warning: Could not parse WiFi credentials"
+            fi
+        else
+            echo "  No WiFi credentials configured, skipping (configure via Settings > Wireless)"
+        fi
+    else
+        echo "  Backend container not running, skipping WiFi provisioning"
+    fi
+else
+    echo "  provision_wifi_mqtt.py not found, skipping WiFi provisioning"
+fi
+
 # Step 7: Deploy MCU firmware (if present)
 echo ""
 echo "Step 7: Deploying MCU firmware (if present)..."
-if [ -d "firmware/wired" ] && [ -f "local_code/get_enabled_modules.py" ] && [ -f "local_code/trigger_ota_mqtt.py" ]; then
+if [ -d "firmware/wired" ] && [ -f "local_code/trigger_ota_mqtt.py" ]; then
     echo "  Firmware directory found, querying enabled devices..."
 
-    # Query MongoDB for enabled modules
-    MODULES=$("$VENV_PATH/bin/python3" local_code/get_enabled_modules.py 2>/dev/null || echo "[]")
+    # Query MongoDB for enabled modules via Docker (MongoDB is not exposed to host)
+    MONGODB_CONTAINER=$(docker compose ps -q mongodb 2>/dev/null)
+    if [ -z "$MONGODB_CONTAINER" ]; then
+        echo "  MongoDB container not running, skipping OTA deployment"
+        MODULES="[]"
+    else
+        MODULES=$(docker exec "$MONGODB_CONTAINER" mongosh --quiet --eval '
+            const config = db.getSiblingDB("trailcurrent").system_config.findOne({_id: "main"});
+            const modules = (config && config.mcu_modules) || [];
+            const enabled = modules.filter(m => m.enabled === true).map(m => ({hostname: m.hostname, type: m.type, name: m.name}));
+            JSON.stringify(enabled);
+        ' 2>/dev/null || echo "[]")
+    fi
 
     if [ "$MODULES" = "[]" ]; then
         echo "  No enabled modules found in database, skipping OTA deployment"

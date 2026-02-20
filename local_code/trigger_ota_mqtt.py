@@ -34,7 +34,7 @@ MQTT_PORT = int(match.group(3))  # port
 USE_TLS = (protocol == 'mqtts')
 
 # CA certificate path (same as can-to-mqtt.py)
-MQTT_CA_CERT_PATH = os.path.join(os.path.dirname(__file__), '..', 'volumes', 'keys', 'ca.pem')
+MQTT_CA_CERT_PATH = os.path.join(os.path.dirname(__file__), 'ca.pem')
 
 
 def byte_to_bit_array(byte):
