@@ -114,7 +114,7 @@ Connect power to the Pi so that it boots.
 
 ## Step 5: Transfer and Run the Setup Script
 
-On your development machine, open a terminal and navigate to the directory where you cloned this repository. Then transfer the setup script to the Pi:
+On your development machine connected to the same network as the Pi, open a terminal and navigate to the directory where you cloned this repository. Then transfer the setup script to the Pi:
 
 ```bash
 cd <path-to-your-clone>/TrailCurrentInVehicleCompute
@@ -211,6 +211,7 @@ Your Pi is now ready for application deployment:
 
 1. **Create a deployment package** on your development machine (see [PI_DEPLOYMENT.md](../PI_DEPLOYMENT.md)):
    ```bash
+   # cd to root of cloned directory before executing
    ./create-deployment-package.sh --version=1.0.0
    ```
 
@@ -230,6 +231,12 @@ Your Pi is now ready for application deployment:
    chmod +x deploy.sh
    ./deploy.sh
    ```
+5. **Set NodeRed MQTT Password**
+   Navigtate to `https://<yourhostname>.local:8443`
+6. **Login with credentials**
+   Using the credentials you set in your .env file login to the server.
+7. **Set MQTT Password**
+   Click on any of the mqtt nodes and edit the broker by going the the security tab and entering the username and password from your .env file. Then publish from node-red. All nodes use the same connnection so you only need to edit one. Afer publishing you should be able to see CAN data and control devices.
 
 On first run, `deploy.sh` will prompt you to configure `.env` with your credentials. TLS certificates were already generated during setup using the Pi's hostname. See [PI_DEPLOYMENT.md](../PI_DEPLOYMENT.md) for the full deployment walkthrough.
 
