@@ -216,13 +216,19 @@ Your Pi is now ready for application deployment:
 
 2. **Transfer the zip to the Pi**:
    ```bash
-   scp trailcurrent-deployment-1.0.0.zip <username>@<hostname>.local:~/trailcurrent/
+   scp trailcurrent-deployment-1.0.0.zip <username>@<hostname>.local:~
    ```
 
-3. **Deploy**:
+3. **SSH into the Pi**:
    ```bash
-   cd ~/trailcurrent
+   ssh <username>@<hostname>.local
+   ```
+
+4. **Extract and deploy**:
+   ```bash
+   cd ~/
    unzip trailcurrent-deployment-1.0.0.zip
+   chmod +x deploy.sh
    ./deploy.sh
    ```
 
