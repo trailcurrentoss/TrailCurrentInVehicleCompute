@@ -229,12 +229,12 @@ Devices stored in MongoDB (`system_config.mcu_modules`):
 
 ### 2. Extract on Pi
 ```bash
-unzip trailcurrent-deployment-0.0.13.zip -d /home/trailcurrent/trailcurrent
+unzip trailcurrent-deployment-0.0.13.zip
 ```
 
 ### 3. Run Deployment
 ```bash
-cd /home/trailcurrent/trailcurrent
+chmod +x deploy.sh
 ./deploy.sh
 # Step 7 automatically handles OTA updates
 ```

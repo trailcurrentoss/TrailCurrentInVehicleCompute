@@ -326,7 +326,7 @@ echo ""
 echo "Step 11: Creating deployment directory structure..."
 
 # Run as the actual user so all files are owned correctly from the start
-DEPLOY_DIR="$USER_HOME/trailcurrent"
+DEPLOY_DIR="$USER_HOME"
 sudo -u "$CURRENT_USER" mkdir -p "$DEPLOY_DIR/data/keys"
 sudo -u "$CURRENT_USER" mkdir -p "$DEPLOY_DIR/data/tileserver"
 sudo -u "$CURRENT_USER" mkdir -p "$DEPLOY_DIR/data/node-red"

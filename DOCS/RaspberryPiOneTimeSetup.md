@@ -143,7 +143,7 @@ The script installs and configures everything automatically:
 | 8 | Configures auto-boot on power — Pi 5 only (no power button needed in vehicle) |
 | 9 | Creates Python virtual environment at `~/local_code/cantomqtt` |
 | 10 | Installs and enables the `cantomqtt` systemd service |
-| 11 | Creates the deployment directory structure at `~/trailcurrent/` |
+| 11 | Creates the deployment directory structure at `~/` |
 | 12 | Generates TLS/SSL certificates using the Pi's hostname (10-year validity) |
 
 ---
@@ -193,15 +193,15 @@ If `can0` does not appear at all, the CAN hat overlay or wiring may be incorrect
 
 ## Step 8: Transfer Map Tiles
 
-The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/trailcurrent/data/tileserver/map.mbtiles` then re-create as a file).
+The map tiles file **must** be in place before running `deploy.sh`. If it is missing, Docker will create a root-owned directory at the mount point, which breaks the tileserver and requires manual cleanup (`sudo rm -rf ~/data/tileserver/map.mbtiles` then re-create as a file).
 
 From your development machine:
 
 ```bash
-scp map.mbtiles <username>@<hostname>.local:~/trailcurrent/data/tileserver/map.mbtiles
+scp map.mbtiles <username>@<hostname>.local:~/data/tileserver/map.mbtiles
 ```
 
-The `~/trailcurrent/data/tileserver/` directory was already created by the setup script. See [UpdatingMapTiles.md](UpdatingMapTiles.md) for how to obtain or generate this file.
+The `~/data/tileserver/` directory was already created by the setup script. See [UpdatingMapTiles.md](UpdatingMapTiles.md) for how to obtain or generate this file.
 
 ---
 
@@ -226,7 +226,6 @@ Your Pi is now ready for application deployment:
 
 4. **Extract and deploy**:
    ```bash
-   cd ~/
    unzip trailcurrent-deployment-1.0.0.zip
    chmod +x deploy.sh
    ./deploy.sh

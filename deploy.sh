@@ -104,7 +104,7 @@ if [ ! -f .env ]; then
         echo ""
         cp .env.example .env
         echo "  Created .env from template."
-        echo "  Please edit .env now, then re-run this script."
+        echo "  Please edit .env now, then re-run ./deploy.sh"
         echo ""
         echo "  Quick setup commands:"
         echo "    nano .env"
@@ -199,24 +199,30 @@ echo "Step 4: Starting Docker services..."
 # --no-build: use pre-loaded images, don't try to build from source
 docker compose up -d --no-build
 
-# Step 5: Copy local_code to Pi user's home directory
+# Step 5: Ensure local_code is deployed to the user's home directory
 echo ""
 echo "Step 5: Deploying local_code to $LOCAL_CODE_DEST..."
-if [ -d "$LOCAL_CODE_DEST" ]; then
-    # Preserve existing .env if it exists
-    if [ -f "$LOCAL_CODE_DEST/.env" ]; then
-        cp "$LOCAL_CODE_DEST/.env" /tmp/cantomqtt_env_backup
-    fi
-fi
-mkdir -p "$LOCAL_CODE_DEST"
-cp -r local_code/* "$LOCAL_CODE_DEST/"
-
-# Restore or deploy the local_code .env
-if [ -f /tmp/cantomqtt_env_backup ]; then
-    # Keep existing env (may have manual customizations)
-    mv /tmp/cantomqtt_env_backup "$LOCAL_CODE_DEST/.env"
+SRC_LOCAL_CODE="$(cd local_code && pwd)"
+DEST_LOCAL_CODE="$(cd "$LOCAL_CODE_DEST" 2>/dev/null && pwd || echo "$LOCAL_CODE_DEST")"
+if [ "$SRC_LOCAL_CODE" = "$DEST_LOCAL_CODE" ]; then
+    echo "  local_code already in place, skipping copy"
 else
-    cp local_code/.env "$LOCAL_CODE_DEST/.env"
+    if [ -d "$LOCAL_CODE_DEST" ]; then
+        # Preserve existing .env if it exists
+        if [ -f "$LOCAL_CODE_DEST/.env" ]; then
+            cp "$LOCAL_CODE_DEST/.env" /tmp/cantomqtt_env_backup
+        fi
+    fi
+    mkdir -p "$LOCAL_CODE_DEST"
+    cp -r local_code/* "$LOCAL_CODE_DEST/"
+
+    # Restore or deploy the local_code .env
+    if [ -f /tmp/cantomqtt_env_backup ]; then
+        # Keep existing env (may have manual customizations)
+        mv /tmp/cantomqtt_env_backup "$LOCAL_CODE_DEST/.env"
+    else
+        cp local_code/.env "$LOCAL_CODE_DEST/.env"
+    fi
 fi
 
 # Step 5.5: Install Python dependencies

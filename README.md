@@ -147,9 +147,9 @@ This will:
 
 **Transfer and deploy to Pi:**
 ```bash
-scp trailcurrent-deployment-1.0.0.zip trailcurrent@pi.local:~/trailcurrent/
+scp trailcurrent-deployment-1.0.0.zip trailcurrent@pi.local:~
 # On the Pi:
-cd ~/trailcurrent && unzip trailcurrent-deployment-1.0.0.zip && ./deploy.sh
+unzip trailcurrent-deployment-1.0.0.zip && chmod +x deploy.sh && ./deploy.sh
 ```
 
 See [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md) for detailed deployment instructions.

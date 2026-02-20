@@ -48,13 +48,12 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
 2. **SSH to the Pi and extract:**
    ```bash
    ssh trailcurrent@trailcurrent01.local
-   mkdir -p ~/trailcurrent
-   unzip trailcurrent-deployment-1.0.0.zip -d ~/trailcurrent
-   cd ~/trailcurrent
+   unzip trailcurrent-deployment-1.0.0.zip
    ```
 
 3. **Run the deployment script:**
    ```bash
+   chmod +x deploy.sh
    ./deploy.sh
    ```
 
@@ -97,12 +96,12 @@ When deploying a new version:
 
 1. **Transfer new zip to Pi:**
    ```bash
-   scp trailcurrent-deployment-1.1.0.zip trailcurrent@trailcurrent01.local:~/trailcurrent/
+   scp trailcurrent-deployment-1.1.0.zip trailcurrent@trailcurrent01.local:~
    ```
 
-2. **Extract and deploy:**
+2. **SSH in, extract, and deploy:**
    ```bash
-   cd ~/trailcurrent
+   ssh trailcurrent@trailcurrent01.local
    unzip -o trailcurrent-deployment-1.1.0.zip
    ./deploy.sh
    ```
@@ -191,7 +190,7 @@ sudo journalctl -u cantomqtt.service -f
 ip link show can0
 
 # Check local_code .env has correct external hostname
-cat /home/trailcurrent/local_code/.env | grep MQTT_BROKER_URL
+grep MQTT_BROKER_URL ~/local_code/.env
 ```
 
 ### Out of disk space
