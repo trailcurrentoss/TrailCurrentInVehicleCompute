@@ -225,6 +225,11 @@ else
     fi
 fi
 
+# Copy CA certificate for host-side scripts (separate from Docker volume mounts)
+if [ -f "data/keys/ca.pem" ]; then
+    cp data/keys/ca.pem "$LOCAL_CODE_DEST/ca.pem"
+fi
+
 # Step 5.5: Install Python dependencies
 echo ""
 echo "Step 5.5: Installing Python dependencies..."

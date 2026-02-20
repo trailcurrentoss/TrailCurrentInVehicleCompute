@@ -45,7 +45,7 @@ USE_TLS = (protocol == 'mqtts')
 
 MQTT_INBOUND_TOPIC = 'can/inbound'
 MQTT_OUTBOUND_TOPIC = 'can/outbound'
-MQTT_CA_CERT_PATH = os.path.join(SCRIPT_DIR, '..', 'volumes', 'keys', 'ca.pem')
+MQTT_CA_CERT_PATH = os.path.join(SCRIPT_DIR, 'ca.pem')
 
 MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
 if not MQTT_USERNAME:
