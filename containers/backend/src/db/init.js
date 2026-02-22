@@ -118,6 +118,11 @@ async function seedDatabase() {
             wizard_completed: false,
             cloud_enabled: false,
             cloud_url: '',
+            cloud_mqtt_username: '',
+            cloud_mqtt_password_encrypted: '',
+            cloud_mqtt_password_iv: '',
+            cloud_api_key_encrypted: '',
+            cloud_api_key_iv: '',
             mcu_modules: [],
             wifi_ssid: '',
             wifi_password_encrypted: '',
@@ -139,6 +144,21 @@ async function seedDatabase() {
         }
         if (existingConfig.wifi_password_iv === undefined) {
             updates.wifi_password_iv = '';
+        }
+        if (existingConfig.cloud_mqtt_username === undefined) {
+            updates.cloud_mqtt_username = '';
+        }
+        if (existingConfig.cloud_mqtt_password_encrypted === undefined) {
+            updates.cloud_mqtt_password_encrypted = '';
+        }
+        if (existingConfig.cloud_mqtt_password_iv === undefined) {
+            updates.cloud_mqtt_password_iv = '';
+        }
+        if (existingConfig.cloud_api_key_encrypted === undefined) {
+            updates.cloud_api_key_encrypted = '';
+        }
+        if (existingConfig.cloud_api_key_iv === undefined) {
+            updates.cloud_api_key_iv = '';
         }
         if (Object.keys(updates).length > 0) {
             await systemConfig.updateOne(

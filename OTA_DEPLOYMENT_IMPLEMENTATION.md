@@ -384,6 +384,142 @@ To test the OTA deployment system:
 - OTA updates not signed (signed updates planned for future)
 - Firmware files stored locally (no external downloads during OTA)
 
+---
+
+## Cloud-to-Pi OTA Deployment (Deployment Watcher)
+
+The deployment watcher enables remote software updates from the TrailCurrent Cloud server. When a deployment zip is uploaded to the cloud, the Pi automatically downloads, verifies, and applies it.
+
+### Architecture
+
+```
+TrailCurrentCloud
+  → User uploads deployment zip via web UI
+  → Cloud publishes MQTT message to rv/deployment/available (QoS 1, retained)
+  → Message payload: { id, version, filename, size, sha256, downloadUrl, timestamp }
+
+Raspberry Pi (deployment-watcher.py on host)
+  → Reads cloud config from MongoDB via docker exec into backend container
+  → Connects to cloud MQTT broker (mqtts://<cloud-host>:8883, CA-signed TLS)
+  → Subscribes to rv/deployment/available
+  → On message: downloads zip → verifies SHA256 → extracts to ~/ → runs deploy.sh
+  → Listens on local MQTT (local/config/cloud_updated) for config changes from the PWA
+```
+
+### Cloud Configuration
+
+Cloud credentials are collected through the PWA (setup wizard and settings page) and stored encrypted in MongoDB:
+
+| Field | Description |
+|-------|-------------|
+| `cloud_enabled` | Toggle cloud connectivity on/off |
+| `cloud_url` | Cloud server URL (e.g., `https://cloud.example.com`) |
+| `cloud_mqtt_username` | MQTT username for cloud broker |
+| `cloud_mqtt_password` | MQTT password (encrypted at rest) |
+| `cloud_api_key` | API key for download authentication (`rv_...` format, encrypted at rest) |
+
+The **setup wizard** (Step 1) and **Settings > Cloud Configuration** both allow managing these fields. When any cloud field is saved, the backend publishes a notification to `local/config/cloud_updated` on the local MQTT broker, triggering the deployment watcher to re-read the config.
+
+### How the Deployment Watcher Works
+
+**Files:**
+- `local_code/deployment-watcher.py` — Main script
+- `local_code/deployment-watcher.service` — Systemd unit file
+
+**Startup sequence:**
+1. Loads `.env` from its script directory (same pattern as `can-to-mqtt.py`)
+2. Connects to the local MQTT broker (for config change notifications)
+3. Reads cloud config from MongoDB via `docker exec` into the backend container
+4. If cloud is enabled and config is complete, connects to the cloud MQTT broker
+5. Subscribes to `rv/deployment/available` on the cloud broker
+6. Enters main loop, waiting for deployment notifications
+
+**On deployment notification:**
+1. Parses JSON payload (`id`, `version`, `filename`, `size`, `sha256`, `downloadUrl`)
+2. Checks `~/.deployment-watcher-last` — skips if this deployment ID was already applied
+3. Constructs download URL: `cloud_url` + `downloadUrl` (e.g., `https://cloud.example.com/api/deployment-download/abc123`)
+4. Downloads zip to `/tmp/deployment-<id>.zip` with `Authorization: <cloud_api_key>` header
+5. Computes SHA256 during download, compares to expected checksum
+6. Extracts zip to `~/`
+7. Finds and executes `deploy.sh`
+8. Records deployment ID in `~/.deployment-watcher-last`
+
+**On config change (`local/config/cloud_updated`):**
+1. Re-reads cloud config from MongoDB via `docker exec`
+2. If connection details changed, disconnects and reconnects to cloud MQTT
+3. If cloud was disabled, disconnects from cloud MQTT
+
+### Reading Config via Docker Exec
+
+The deployment watcher reads cloud configuration by running a Node.js one-liner inside the backend container via `docker exec`. This approach:
+- Reuses the same decryption logic (AES-256-CBC with `ENCRYPTION_KEY`) already available in the container
+- Requires no additional Python crypto dependencies
+- Follows the same pattern used by `deploy.sh` for WiFi credential provisioning (Step 6.5)
+
+### Systemd Service
+
+```ini
+[Unit]
+Description=TrailCurrent Deployment Watcher
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=trailcurrent
+WorkingDirectory=/home/trailcurrent/local_code
+EnvironmentFile=/home/trailcurrent/local_code/.env
+ExecStart=/home/trailcurrent/local_code/cantomqtt/bin/python /home/trailcurrent/local_code/deployment-watcher.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+The service uses the same Python venv (`cantomqtt`) as the CAN-to-MQTT bridge and is installed by `deploy.sh` Step 6.1.
+
+### Resilience
+
+- **Duplicate prevention:** Tracks last deployed ID in `~/.deployment-watcher-last` to handle retained MQTT messages
+- **Concurrent deployment lock:** File lock at `/tmp/deployment-watcher.lock` prevents overlapping deployments
+- **Automatic reconnection:** Paho MQTT handles reconnection to both local and cloud brokers
+- **Crash recovery:** Script retries up to 100 times with 30-second backoff between attempts; crashes are logged to `deployment-watcher-crash.log`
+- **Graceful shutdown:** Handles SIGTERM/SIGINT for clean disconnection
+
+### Troubleshooting
+
+#### Deployment watcher not running
+```bash
+sudo systemctl status deployment-watcher.service
+sudo journalctl -u deployment-watcher.service -f
+```
+
+#### Cloud MQTT connection failing
+- Verify cloud config is set via the PWA (Settings > Cloud Configuration)
+- Check that the cloud server has CA-signed TLS certificates
+- Verify MQTT credentials match the cloud broker's configuration
+```bash
+sudo journalctl -u deployment-watcher.service | grep "cloud MQTT"
+```
+
+#### Deployment downloads failing
+- Verify the API key is correct (`rv_...` format)
+- Check that the cloud URL is reachable from the Pi
+- Look for HTTP error codes in the logs:
+```bash
+sudo journalctl -u deployment-watcher.service | grep -i "error\|failed\|HTTP"
+```
+
+#### Config changes not being picked up
+- Verify the backend is publishing to `local/config/cloud_updated`:
+```bash
+docker exec -it trailcurrent-mosquitto-1 mosquitto_sub -h localhost -t "local/config/cloud_updated" -u trailcurrent -P mqttpass123 -v
+```
+- Save cloud settings again from the PWA to trigger a notification
+
+---
+
 ## Future Enhancements
 
 - [ ] Parallel firmware deployment (multiple devices at once)

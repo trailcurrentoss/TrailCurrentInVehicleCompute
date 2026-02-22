@@ -270,6 +270,24 @@ fi
 echo "  Waiting for CAN-to-MQTT bridge to initialize..."
 sleep 5
 
+# Step 6.1: Install/restart deployment watcher service
+echo ""
+echo "Step 6.1: Setting up deployment watcher service..."
+if sudo systemctl is-active --quiet deployment-watcher.service 2>/dev/null || sudo systemctl is-enabled --quiet deployment-watcher.service 2>/dev/null; then
+    sudo systemctl restart deployment-watcher.service
+    echo "  deployment-watcher.service restarted"
+else
+    echo "  deployment-watcher.service not installed, installing..."
+    if [ -f "local_code/deployment-watcher.service" ]; then
+        sudo cp local_code/deployment-watcher.service /etc/systemd/system/deployment-watcher.service
+        sudo systemctl daemon-reload
+        sudo systemctl enable --now deployment-watcher.service
+        echo "  deployment-watcher.service installed and started"
+    else
+        echo "  local_code/deployment-watcher.service not found, skipping"
+    fi
+fi
+
 # Step 6.5: Provision WiFi credentials to MCUs (needed for OTA)
 echo ""
 echo "Step 6.5: Provisioning WiFi credentials to MCUs..."

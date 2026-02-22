@@ -22,6 +22,8 @@ bundles/
 .git/
 vendor/pkg/
 pyenv
+__pycache__/
+**/__pycache__/
 Vagrantfile
 containers/node-red/node-red-data
 **/*.venv

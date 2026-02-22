@@ -16,6 +16,9 @@ module.exports = (db) => {
                     wizard_completed: false,
                     cloud_enabled: false,
                     cloud_url: '',
+                    cloud_mqtt_username: '',
+                    cloud_mqtt_password: '',
+                    cloud_api_key: '',
                     mcu_modules: [],
                     wifi_ssid: '',
                     wifi_password: '',
@@ -35,9 +38,37 @@ module.exports = (db) => {
                 data.wifi_password = '';
             }
 
+            // Decrypt cloud MQTT password if it exists
+            if (data.cloud_mqtt_password_encrypted && data.cloud_mqtt_password_iv) {
+                try {
+                    data.cloud_mqtt_password = decrypt(data.cloud_mqtt_password_encrypted, data.cloud_mqtt_password_iv);
+                } catch (error) {
+                    console.error('Error decrypting cloud MQTT password:', error);
+                    data.cloud_mqtt_password = '';
+                }
+            } else {
+                data.cloud_mqtt_password = '';
+            }
+
+            // Decrypt cloud API key if it exists
+            if (data.cloud_api_key_encrypted && data.cloud_api_key_iv) {
+                try {
+                    data.cloud_api_key = decrypt(data.cloud_api_key_encrypted, data.cloud_api_key_iv);
+                } catch (error) {
+                    console.error('Error decrypting cloud API key:', error);
+                    data.cloud_api_key = '';
+                }
+            } else {
+                data.cloud_api_key = '';
+            }
+
             // Remove encrypted fields from response
             delete data.wifi_password_encrypted;
             delete data.wifi_password_iv;
+            delete data.cloud_mqtt_password_encrypted;
+            delete data.cloud_mqtt_password_iv;
+            delete data.cloud_api_key_encrypted;
+            delete data.cloud_api_key_iv;
 
             res.json(data);
         } catch (error) {
@@ -49,7 +80,7 @@ module.exports = (db) => {
     // PUT /api/system-config
     router.put('/', async (req, res) => {
         try {
-            const { wizard_completed, cloud_enabled, cloud_url, mcu_modules, wifi_ssid, wifi_password } = req.body;
+            const { wizard_completed, cloud_enabled, cloud_url, cloud_mqtt_username, cloud_mqtt_password, cloud_api_key, mcu_modules, wifi_ssid, wifi_password } = req.body;
 
             const updates = {};
 
@@ -76,6 +107,51 @@ module.exports = (db) => {
                     return res.status(400).json({ error: 'Invalid cloud URL format' });
                 }
                 updates.cloud_url = cloud_url;
+            }
+
+            if (cloud_mqtt_username !== undefined) {
+                if (typeof cloud_mqtt_username !== 'string') {
+                    return res.status(400).json({ error: 'cloud_mqtt_username must be a string' });
+                }
+                updates.cloud_mqtt_username = cloud_mqtt_username;
+            }
+
+            if (cloud_mqtt_password !== undefined) {
+                if (typeof cloud_mqtt_password !== 'string') {
+                    return res.status(400).json({ error: 'cloud_mqtt_password must be a string' });
+                }
+                if (cloud_mqtt_password) {
+                    try {
+                        const encrypted = encrypt(cloud_mqtt_password);
+                        updates.cloud_mqtt_password_encrypted = encrypted.encrypted;
+                        updates.cloud_mqtt_password_iv = encrypted.iv;
+                    } catch (error) {
+                        console.error('Error encrypting cloud MQTT password:', error);
+                        return res.status(500).json({ error: 'Failed to encrypt cloud MQTT password' });
+                    }
+                } else {
+                    updates.cloud_mqtt_password_encrypted = '';
+                    updates.cloud_mqtt_password_iv = '';
+                }
+            }
+
+            if (cloud_api_key !== undefined) {
+                if (typeof cloud_api_key !== 'string') {
+                    return res.status(400).json({ error: 'cloud_api_key must be a string' });
+                }
+                if (cloud_api_key) {
+                    try {
+                        const encrypted = encrypt(cloud_api_key);
+                        updates.cloud_api_key_encrypted = encrypted.encrypted;
+                        updates.cloud_api_key_iv = encrypted.iv;
+                    } catch (error) {
+                        console.error('Error encrypting cloud API key:', error);
+                        return res.status(500).json({ error: 'Failed to encrypt cloud API key' });
+                    }
+                } else {
+                    updates.cloud_api_key_encrypted = '';
+                    updates.cloud_api_key_iv = '';
+                }
             }
 
             if (mcu_modules !== undefined) {
@@ -154,6 +230,16 @@ module.exports = (db) => {
                 }
             }
 
+            // Notify local services if cloud config changed
+            if (cloud_enabled !== undefined || cloud_url !== undefined || cloud_mqtt_username !== undefined || cloud_mqtt_password !== undefined || cloud_api_key !== undefined) {
+                const mqttService = require('../mqtt');
+                try {
+                    mqttService.publishCloudConfigChanged();
+                } catch (error) {
+                    console.error('[System Config] Error publishing cloud config notification:', error);
+                }
+            }
+
             const data = await systemConfig.findOne({ _id: 'main' });
 
             // Decrypt WiFi password for response
@@ -168,9 +254,37 @@ module.exports = (db) => {
                 data.wifi_password = '';
             }
 
+            // Decrypt cloud MQTT password for response
+            if (data.cloud_mqtt_password_encrypted && data.cloud_mqtt_password_iv) {
+                try {
+                    data.cloud_mqtt_password = decrypt(data.cloud_mqtt_password_encrypted, data.cloud_mqtt_password_iv);
+                } catch (error) {
+                    console.error('Error decrypting cloud MQTT password:', error);
+                    data.cloud_mqtt_password = '';
+                }
+            } else {
+                data.cloud_mqtt_password = '';
+            }
+
+            // Decrypt cloud API key for response
+            if (data.cloud_api_key_encrypted && data.cloud_api_key_iv) {
+                try {
+                    data.cloud_api_key = decrypt(data.cloud_api_key_encrypted, data.cloud_api_key_iv);
+                } catch (error) {
+                    console.error('Error decrypting cloud API key:', error);
+                    data.cloud_api_key = '';
+                }
+            } else {
+                data.cloud_api_key = '';
+            }
+
             // Remove encrypted fields from response
             delete data.wifi_password_encrypted;
             delete data.wifi_password_iv;
+            delete data.cloud_mqtt_password_encrypted;
+            delete data.cloud_mqtt_password_iv;
+            delete data.cloud_api_key_encrypted;
+            delete data.cloud_api_key_iv;
 
             res.json(data);
         } catch (error) {
@@ -187,6 +301,11 @@ module.exports = (db) => {
                 wizard_completed: false,
                 cloud_enabled: false,
                 cloud_url: '',
+                cloud_mqtt_username: '',
+                cloud_mqtt_password_encrypted: '',
+                cloud_mqtt_password_iv: '',
+                cloud_api_key_encrypted: '',
+                cloud_api_key_iv: '',
                 mcu_modules: [],
                 wifi_ssid: '',
                 wifi_password_encrypted: '',
@@ -205,7 +324,9 @@ module.exports = (db) => {
                 message: 'Configuration reset successfully',
                 config: {
                     ...resetConfig,
-                    wifi_password: ''
+                    wifi_password: '',
+                    cloud_mqtt_password: '',
+                    cloud_api_key: ''
                 }
             });
         } catch (error) {

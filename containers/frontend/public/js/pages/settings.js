@@ -3,6 +3,7 @@ import { API } from '../api.js';
 
 let settings = null;
 let availableTimezones = [];
+let systemConfig = null;
 
 export const settingsPage = {
     render() {
@@ -57,6 +58,57 @@ export const settingsPage = {
                         id="clock-format-toggle"
                         aria-pressed="${settings.clock_format === '24h'}">
                 </button>
+            </div>
+
+            <!-- Cloud Configuration -->
+            <div class="card settings-item-vertical">
+                <div class="settings-item-header">
+                    <span class="settings-label">Cloud Configuration</span>
+                    <p class="settings-description">Configure connection to your TrailCurrent cloud service for remote management and deployments</p>
+                </div>
+                <div class="cloud-config-container">
+                    <div class="cloud-config-field">
+                        <div class="settings-item" style="padding: 0; border: none;">
+                            <div>
+                                <label class="settings-label" style="font-size: 0.9rem;">Enable Cloud</label>
+                            </div>
+                            <button class="toggle-switch ${systemConfig?.cloud_enabled ? 'active' : ''}"
+                                    id="cloud-enabled-toggle"
+                                    aria-pressed="${systemConfig?.cloud_enabled || false}">
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cloud-config-fields" class="${!systemConfig?.cloud_enabled ? 'hidden' : ''}">
+                        <div class="cloud-config-field">
+                            <label class="password-label" for="settings-cloud-url">Cloud Service URL</label>
+                            <input type="url" id="settings-cloud-url" class="password-input"
+                                   placeholder="https://cloud.example.com"
+                                   value="${systemConfig?.cloud_url || ''}">
+                        </div>
+                        <div class="cloud-config-field">
+                            <label class="password-label" for="settings-cloud-mqtt-username">MQTT Username</label>
+                            <input type="text" id="settings-cloud-mqtt-username" class="password-input"
+                                   placeholder="MQTT username for cloud broker"
+                                   value="${systemConfig?.cloud_mqtt_username || ''}">
+                        </div>
+                        <div class="cloud-config-field">
+                            <label class="password-label" for="settings-cloud-mqtt-password">MQTT Password</label>
+                            <input type="password" id="settings-cloud-mqtt-password" class="password-input"
+                                   placeholder="MQTT password for cloud broker"
+                                   value="${systemConfig?.cloud_mqtt_password || ''}">
+                        </div>
+                        <div class="cloud-config-field">
+                            <label class="password-label" for="settings-cloud-api-key">API Key</label>
+                            <input type="password" id="settings-cloud-api-key" class="password-input"
+                                   placeholder="rv_... API key from cloud settings"
+                                   value="${systemConfig?.cloud_api_key || ''}">
+                        </div>
+                        <div id="cloud-config-message" class="password-message hidden"></div>
+                        <button class="password-submit-btn" id="save-cloud-config-btn">
+                            Save Cloud Settings
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- API Keys -->
@@ -154,9 +206,13 @@ export const settingsPage = {
 
     async init() {
         try {
-            const data = await API.getSettings();
+            const [data, sysConfig] = await Promise.all([
+                API.getSettings(),
+                API.getSystemConfig()
+            ]);
             settings = data;
             availableTimezones = data.available_timezones || [];
+            systemConfig = sysConfig;
 
             document.getElementById('settings-container').innerHTML = this.renderSettings();
             this.setupListeners();
@@ -211,6 +267,27 @@ export const settingsPage = {
                 } catch (error) {
                     console.error('Failed to update clock format:', error);
                 }
+            });
+        }
+
+        // Cloud enabled toggle
+        const cloudEnabledToggle = document.getElementById('cloud-enabled-toggle');
+        if (cloudEnabledToggle) {
+            cloudEnabledToggle.addEventListener('click', () => {
+                const isEnabled = cloudEnabledToggle.classList.toggle('active');
+                cloudEnabledToggle.setAttribute('aria-pressed', isEnabled);
+                const cloudFields = document.getElementById('cloud-config-fields');
+                if (cloudFields) {
+                    cloudFields.classList.toggle('hidden', !isEnabled);
+                }
+            });
+        }
+
+        // Save cloud config button
+        const saveCloudBtn = document.getElementById('save-cloud-config-btn');
+        if (saveCloudBtn) {
+            saveCloudBtn.addEventListener('click', async () => {
+                await this.handleSaveCloudConfig();
             });
         }
 
@@ -382,6 +459,59 @@ export const settingsPage = {
         }
     },
 
+    async handleSaveCloudConfig() {
+        const messageEl = document.getElementById('cloud-config-message');
+        const saveBtn = document.getElementById('save-cloud-config-btn');
+        const cloudEnabledToggle = document.getElementById('cloud-enabled-toggle');
+
+        messageEl.classList.add('hidden');
+        messageEl.classList.remove('success', 'error');
+
+        const cloudEnabled = cloudEnabledToggle.classList.contains('active');
+        const cloudUrl = document.getElementById('settings-cloud-url').value.trim();
+        const cloudMqttUsername = document.getElementById('settings-cloud-mqtt-username').value.trim();
+        const cloudMqttPassword = document.getElementById('settings-cloud-mqtt-password').value;
+        const cloudApiKey = document.getElementById('settings-cloud-api-key').value;
+
+        // Validate URL if cloud is enabled
+        if (cloudEnabled && cloudUrl) {
+            try {
+                new URL(cloudUrl);
+            } catch (e) {
+                this.showCloudConfigMessage('Please enter a valid URL', 'error');
+                return;
+            }
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+            systemConfig = await API.updateSystemConfig({
+                cloud_enabled: cloudEnabled,
+                cloud_url: cloudUrl,
+                cloud_mqtt_username: cloudMqttUsername,
+                cloud_mqtt_password: cloudMqttPassword,
+                cloud_api_key: cloudApiKey
+            });
+            this.showCloudConfigMessage('Cloud settings saved successfully', 'success');
+        } catch (error) {
+            this.showCloudConfigMessage(error.message || 'Failed to save cloud settings', 'error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Cloud Settings';
+        }
+    },
+
+    showCloudConfigMessage(message, type) {
+        const messageEl = document.getElementById('cloud-config-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+            messageEl.classList.remove('hidden', 'success', 'error');
+            messageEl.classList.add(type);
+        }
+    },
+
     async loadApiKeys() {
         try {
             const data = await API.getApiKeys();
@@ -531,5 +661,6 @@ export const settingsPage = {
 
     cleanup() {
         settings = null;
+        systemConfig = null;
     }
 };

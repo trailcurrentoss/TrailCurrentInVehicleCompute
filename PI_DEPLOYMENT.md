@@ -63,6 +63,7 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
    - Load all Docker images from tar files
    - Start all services
    - Set up the CAN-to-MQTT bridge
+   - Set up the deployment watcher (for cloud OTA updates)
    - Deploy MCU firmware via OTA (if firmware is included)
 
 4. **Edit `.env` with your credentials** (first run only):
@@ -111,6 +112,7 @@ When deploying a new version:
    - Load updated Docker images
    - Preserve your `.env`, certificates, map tiles, and Node-RED flows
    - Restart all services
+   - Restart the deployment watcher service
    - Update MCU firmware if new firmware is included
 
 ---
@@ -159,6 +161,9 @@ docker compose logs --tail=20
 # CAN-to-MQTT bridge running
 sudo systemctl status cantomqtt.service
 
+# Deployment watcher running (for cloud OTA updates)
+sudo systemctl status deployment-watcher.service
+
 # API responding
 curl -k https://localhost/api/health
 
@@ -193,6 +198,16 @@ ip link show can0
 grep MQTT_BROKER_URL ~/local_code/.env
 ```
 
+### Deployment watcher not picking up cloud updates
+```bash
+# Check service status and logs
+sudo systemctl status deployment-watcher.service
+sudo journalctl -u deployment-watcher.service -f
+
+# Verify cloud is configured via the PWA (Settings > Cloud Configuration)
+# The watcher logs will show "Cloud not enabled" or "config incomplete" if not set up
+```
+
 ### Out of disk space
 ```bash
 df -h
@@ -211,6 +226,6 @@ ping trailcurrent01.local
 
 - **Initial Pi Setup**: [DOCS/PiSetup.md](DOCS/PiSetup.md)
 - **Firmware Integration**: [FIRMWARE_SETUP.md](FIRMWARE_SETUP.md)
-- **OTA System Details**: [OTA_DEPLOYMENT_IMPLEMENTATION.md](OTA_DEPLOYMENT_IMPLEMENTATION.md)
+- **OTA System Details**: [OTA_DEPLOYMENT_IMPLEMENTATION.md](OTA_DEPLOYMENT_IMPLEMENTATION.md) (includes MCU firmware OTA and cloud-to-Pi deployment watcher)
 - **Development**: [README.md](README.md)
 - **Map Tiles**: [DOCS/UpdatingMapTiles.md](DOCS/UpdatingMapTiles.md)

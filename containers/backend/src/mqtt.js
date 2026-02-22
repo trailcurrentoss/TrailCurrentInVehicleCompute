@@ -27,7 +27,8 @@ const TOPICS = {
     AIRQUALITY_TEMP_AND_HUMIDITY: `${MQTT_ROOT}/${MQTT_AIRQUALITY}/temphumid`,
     GPS_LAT_LON: `${MQTT_ROOT}/${MQTT_GPS}/latlon`,
     GPS_ALT: `${MQTT_ROOT}/${MQTT_GPS}/alt`,
-    GPS_GNSS_DETAILS: `${MQTT_ROOT}/${MQTT_GPS}/details`
+    GPS_GNSS_DETAILS: `${MQTT_ROOT}/${MQTT_GPS}/details`,
+    CLOUD_CONFIG_CHANGED: 'local/config/cloud_updated'
 };
 
 class MqttService {
@@ -516,6 +517,20 @@ class MqttService {
 
         // Send sequence with delays
         sendWithDelay(messages);
+        return true;
+    }
+
+    // Notify local services that cloud configuration has changed
+    publishCloudConfigChanged() {
+        if (!this.connected) {
+            console.warn('MQTT not connected, cannot publish cloud config notification');
+            return false;
+        }
+
+        const topic = TOPICS.CLOUD_CONFIG_CHANGED;
+        const payload = { timestamp: new Date().toISOString() };
+        console.log(`Publishing cloud config changed to ${topic}`);
+        this.client.publish(topic, JSON.stringify(payload), { qos: 1 });
         return true;
     }
 

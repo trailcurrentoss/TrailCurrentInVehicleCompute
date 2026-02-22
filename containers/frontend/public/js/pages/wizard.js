@@ -95,6 +95,17 @@ export const wizardPage = {
                 systemConfig.wifi_password = '';
             }
 
+            // Initialize cloud credential fields if not present
+            if (!systemConfig.cloud_mqtt_username) {
+                systemConfig.cloud_mqtt_username = '';
+            }
+            if (!systemConfig.cloud_mqtt_password) {
+                systemConfig.cloud_mqtt_password = '';
+            }
+            if (!systemConfig.cloud_api_key) {
+                systemConfig.cloud_api_key = '';
+            }
+
             // Render first step
             this.renderStep(1);
 
@@ -179,7 +190,7 @@ export const wizardPage = {
                         </p>
                     </div>
 
-                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}">
+                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-fields-container">
                         <label class="wizard-label" for="cloud-url">Cloud Service URL</label>
                         <input type="url"
                                id="cloud-url"
@@ -191,6 +202,39 @@ export const wizardPage = {
                             Enter the full URL of your cloud service (e.g., https://cloud.trailcurrent.com)
                         </p>
                         <div id="cloud-url-error" class="wizard-error hidden"></div>
+                    </div>
+
+                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-mqtt-username-container">
+                        <label class="wizard-label" for="cloud-mqtt-username">Cloud MQTT Username</label>
+                        <input type="text"
+                               id="cloud-mqtt-username"
+                               class="wizard-input"
+                               placeholder="MQTT username for cloud broker"
+                               value="${systemConfig.cloud_mqtt_username || ''}"
+                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
+                        <p class="wizard-field-hint">Username for connecting to the cloud MQTT broker</p>
+                    </div>
+
+                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-mqtt-password-container">
+                        <label class="wizard-label" for="cloud-mqtt-password">Cloud MQTT Password</label>
+                        <input type="password"
+                               id="cloud-mqtt-password"
+                               class="wizard-input"
+                               placeholder="MQTT password for cloud broker"
+                               value="${systemConfig.cloud_mqtt_password || ''}"
+                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
+                        <p class="wizard-field-hint">Password for connecting to the cloud MQTT broker</p>
+                    </div>
+
+                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-api-key-container">
+                        <label class="wizard-label" for="cloud-api-key">Cloud API Key</label>
+                        <input type="password"
+                               id="cloud-api-key"
+                               class="wizard-input"
+                               placeholder="rv_... API key from cloud settings"
+                               value="${systemConfig.cloud_api_key || ''}"
+                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
+                        <p class="wizard-field-hint">API key for downloading deployments (generate in cloud Settings &gt; API Keys)</p>
                     </div>
 
                     <div class="wizard-divider"></div>
@@ -339,6 +383,18 @@ export const wizardPage = {
                                 <span class="summary-label">Cloud Service URL</span>
                                 <span class="summary-value summary-url">${systemConfig.cloud_url || 'Not configured'}</span>
                             </div>
+                            <div class="summary-item">
+                                <span class="summary-label">MQTT Username</span>
+                                <span class="summary-value">${systemConfig.cloud_mqtt_username || 'Not configured'}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">MQTT Password</span>
+                                <span class="summary-value">${systemConfig.cloud_mqtt_password ? '••••••••' : 'Not configured'}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">API Key</span>
+                                <span class="summary-value">${systemConfig.cloud_api_key ? '••••••••' : 'Not configured'}</span>
+                            </div>
                         ` : ''}
                     </div>
 
@@ -369,10 +425,20 @@ export const wizardPage = {
 
     attachStep1Listeners() {
         const cloudToggle = document.getElementById('cloud-toggle');
-        const cloudUrlField = document.querySelector('.wizard-field:nth-of-type(2)');
         const cloudUrlInput = document.getElementById('cloud-url');
+        const cloudMqttUsernameInput = document.getElementById('cloud-mqtt-username');
+        const cloudMqttPasswordInput = document.getElementById('cloud-mqtt-password');
+        const cloudApiKeyInput = document.getElementById('cloud-api-key');
         const wifiSsidInput = document.getElementById('wizard-wifi-ssid');
         const wifiPasswordInput = document.getElementById('wizard-wifi-password');
+
+        // All cloud field containers to show/hide together
+        const cloudFieldContainers = [
+            document.getElementById('cloud-fields-container'),
+            document.getElementById('cloud-mqtt-username-container'),
+            document.getElementById('cloud-mqtt-password-container'),
+            document.getElementById('cloud-api-key-container')
+        ];
 
         if (cloudToggle) {
             cloudToggle.addEventListener('click', () => {
@@ -380,14 +446,20 @@ export const wizardPage = {
                 cloudToggle.classList.toggle('active', systemConfig.cloud_enabled);
                 cloudToggle.setAttribute('aria-pressed', systemConfig.cloud_enabled);
 
-                // Show/hide URL field
-                if (systemConfig.cloud_enabled) {
-                    cloudUrlField.classList.remove('hidden');
-                    cloudUrlInput.disabled = false;
+                // Show/hide all cloud fields
+                cloudFieldContainers.forEach(container => {
+                    if (!container) return;
+                    if (systemConfig.cloud_enabled) {
+                        container.classList.remove('hidden');
+                        container.querySelectorAll('input').forEach(input => input.disabled = false);
+                    } else {
+                        container.classList.add('hidden');
+                        container.querySelectorAll('input').forEach(input => input.disabled = true);
+                    }
+                });
+
+                if (systemConfig.cloud_enabled && cloudUrlInput) {
                     cloudUrlInput.focus();
-                } else {
-                    cloudUrlField.classList.add('hidden');
-                    cloudUrlInput.disabled = true;
                 }
             });
         }
@@ -395,6 +467,24 @@ export const wizardPage = {
         if (cloudUrlInput) {
             cloudUrlInput.addEventListener('change', (e) => {
                 systemConfig.cloud_url = e.target.value;
+            });
+        }
+
+        if (cloudMqttUsernameInput) {
+            cloudMqttUsernameInput.addEventListener('change', (e) => {
+                systemConfig.cloud_mqtt_username = e.target.value;
+            });
+        }
+
+        if (cloudMqttPasswordInput) {
+            cloudMqttPasswordInput.addEventListener('change', (e) => {
+                systemConfig.cloud_mqtt_password = e.target.value;
+            });
+        }
+
+        if (cloudApiKeyInput) {
+            cloudApiKeyInput.addEventListener('change', (e) => {
+                systemConfig.cloud_api_key = e.target.value;
             });
         }
 
@@ -627,6 +717,9 @@ export const wizardPage = {
                 wizard_completed: true,
                 cloud_enabled: systemConfig.cloud_enabled,
                 cloud_url: systemConfig.cloud_url,
+                cloud_mqtt_username: systemConfig.cloud_mqtt_username || '',
+                cloud_mqtt_password: systemConfig.cloud_mqtt_password || '',
+                cloud_api_key: systemConfig.cloud_api_key || '',
                 mcu_modules: systemConfig.mcu_modules || [],
                 wifi_ssid: systemConfig.wifi_ssid || '',
                 wifi_password: systemConfig.wifi_password || ''

@@ -9,6 +9,7 @@
 | Set up a new Raspberry Pi | [DOCS/RaspberryPiOneTimeSetup.md](DOCS/RaspberryPiOneTimeSetup.md) |
 | Deploy or update a Pi | [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md) |
 | Set up Node-RED flows | [Node-RED Setup](#node-red-setup) below |
+| Understand cloud OTA updates | [OTA_DEPLOYMENT_IMPLEMENTATION.md](OTA_DEPLOYMENT_IMPLEMENTATION.md#cloud-to-pi-ota-deployment-deployment-watcher) |
 
 ## Prerequisites
 
@@ -173,7 +174,7 @@ data/                Runtime data (gitignored)
   keys/              TLS certificates
   tileserver/        map.mbtiles
   node-red/          Node-RED flows
-local_code/          Python host services (CAN-to-MQTT bridge, OTA helpers)
+local_code/          Python host services (CAN-to-MQTT bridge, deployment watcher, OTA helpers)
 scripts/             Utility scripts (cert generation)
 ```
 
