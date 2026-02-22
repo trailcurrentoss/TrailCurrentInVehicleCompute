@@ -26,6 +26,7 @@ const STATIC_ASSETS = [
     '/js/pages/settings.js',
     '/js/pages/trailer.js',
     '/js/pages/water.js',    
+    '/apple-touch-icon.png',
     '/icons/icon-180.png',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
