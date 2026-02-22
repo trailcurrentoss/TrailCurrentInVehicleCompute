@@ -231,14 +231,42 @@ generate_certs() {
     # Generate CA certificate (reuse existing so devices don't need to re-install)
     if [ ! -f "$KEYS_DIR/ca.crt" ]; then
         print_info "Generating CA certificate..."
+
+        # Use config file for extensions (works on all OpenSSL versions)
+        cat > "$KEYS_DIR/_ca.cnf" <<'CAEOF'
+[req]
+distinguished_name = req_dn
+x509_extensions = v3_ca
+prompt = no
+
+[req_dn]
+C = US
+ST = State
+L = City
+O = TrailCurrent
+OU = Engineering
+CN = TrailCurrent-CA
+
+[v3_ca]
+basicConstraints = critical, CA:true
+keyUsage = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+CAEOF
+
         openssl req -new -x509 -days $CA_VALIDITY_DAYS \
             -key "$KEYS_DIR/ca.key" \
             -out "$KEYS_DIR/ca.crt" \
-            -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=TrailCurrent-CA" \
-            -addext "basicConstraints=critical,CA:true" \
-            -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
+            -config "$KEYS_DIR/_ca.cnf"
+
+        if [ $? -ne 0 ]; then
+            print_error "Failed to generate CA certificate"
+            rm -f "$KEYS_DIR/_ca.cnf"
+            exit 1
+        fi
+
         chmod 644 "$KEYS_DIR/ca.crt"
         cp "$KEYS_DIR/ca.crt" "$KEYS_DIR/ca.pem"
+        rm -f "$KEYS_DIR/_ca.cnf"
         print_success "CA certificate created"
     else
         print_info "Using existing CA certificate (devices don't need to re-install)"
@@ -250,30 +278,63 @@ generate_certs() {
     chmod 644 "$KEYS_DIR/server.key"
     print_success "Server key created"
 
-    # Generate CSR with SANs and Apple-required extensions
-    print_info "Generating signing request..."
+    # Build server extension config file
+    # Uses -config and -extfile instead of -addext/-copy_extensions
+    # which require OpenSSL 3.0+ and silently fail on older versions
+    print_info "Generating server certificate..."
 
-    # Create config file inline to avoid stdin issues
+    cat > "$KEYS_DIR/_server.cnf" <<SRVEOF
+[req]
+distinguished_name = req_dn
+req_extensions = v3_server
+prompt = no
+
+[req_dn]
+C = US
+ST = State
+L = City
+O = TrailCurrent
+OU = Engineering
+CN = $CN
+
+[v3_server]
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = $SAN_LIST
+SRVEOF
+
     openssl req -new \
         -key "$KEYS_DIR/server.key" \
         -out "$KEYS_DIR/server.csr" \
-        -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=$CN" \
-        -addext "basicConstraints=critical,CA:false" \
-        -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
-        -addext "extendedKeyUsage=serverAuth" \
-        -addext "subjectAltName=$SAN_LIST" 2>/dev/null
+        -config "$KEYS_DIR/_server.cnf"
+
+    if [ $? -ne 0 ]; then
+        print_error "Failed to generate CSR"
+        rm -f "$KEYS_DIR/_server.cnf"
+        exit 1
+    fi
     print_success "Signing request created"
 
-    # Sign certificate (825 days max — Apple rejects server certs > 825 days)
-    print_info "Signing certificate..."
+    # Sign with -extfile to apply extensions (works on all OpenSSL versions)
+    print_info "Signing certificate (valid $SERVER_VALIDITY_DAYS days)..."
     openssl x509 -req -days $SERVER_VALIDITY_DAYS \
         -in "$KEYS_DIR/server.csr" \
         -CA "$KEYS_DIR/ca.crt" \
         -CAkey "$KEYS_DIR/ca.key" \
         -CAcreateserial \
         -out "$KEYS_DIR/server.crt" \
-        -copy_extensions copyall 2>/dev/null
+        -extfile "$KEYS_DIR/_server.cnf" \
+        -extensions v3_server
+
+    if [ $? -ne 0 ]; then
+        print_error "Failed to sign server certificate"
+        rm -f "$KEYS_DIR/_server.cnf"
+        exit 1
+    fi
+
     chmod 644 "$KEYS_DIR/server.crt"
+    rm -f "$KEYS_DIR/_server.cnf"
     print_success "Certificate signed"
 
     # Cleanup

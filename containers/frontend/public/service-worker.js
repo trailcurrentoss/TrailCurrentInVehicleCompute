@@ -123,6 +123,11 @@ self.addEventListener('fetch', (event) => {
                         if (request.mode === 'navigate') {
                             return caches.match('/index.html');
                         }
+                        // Return a proper error response instead of undefined
+                        return new Response('Network error', {
+                            status: 408,
+                            headers: { 'Content-Type': 'text/plain' }
+                        });
                     });
             })
     );

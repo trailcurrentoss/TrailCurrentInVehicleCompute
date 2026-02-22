@@ -102,7 +102,14 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
    2. Open the file — iOS will show "Profile Downloaded"
    3. Go to **Settings > General > VPN & Device Management** and install the profile
    4. Go to **Settings > General > About > Certificate Trust Settings** and enable full trust for **TrailCurrent-CA**
-   5. Now open Safari, navigate to the app, and use **Share > Add to Home Screen**
+   5. Force close Safari (swipe up from the app switcher)
+   6. Go to **Settings > Apps > Safari > Clear History and Website Data** to flush any cached certificate state
+   7. Reopen Safari, navigate to the app, and use **Share > Add to Home Screen**
+
+   If you are **replacing** a previously installed CA (e.g., after regenerating
+   certificates), you must first remove the old profile before installing the
+   new one: **Settings > General > VPN & Device Management > TrailCurrent-CA >
+   Remove Profile**. Then follow steps 1-7 above.
 
    **Android:**
    1. Transfer `TrailCurrent-CA.crt` to the device
