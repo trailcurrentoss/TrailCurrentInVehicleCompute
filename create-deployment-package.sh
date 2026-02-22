@@ -8,8 +8,6 @@ set -e
 #   ./create-deployment-package.sh                    # No version injection
 #   ./create-deployment-package.sh --version=1.0.0    # With version injection + firmware fetch
 #
-# Environment variables:
-#   GITHUB_TOKEN  - GitHub token for private firmware repos (optional)
 
 # Parse parameters
 VERSION=""
@@ -78,9 +76,7 @@ fi
 echo ""
 echo "Step 2: Fetching MCU firmware from GitHub releases..."
 if [ -n "$VERSION" ]; then
-    FETCH_CMD="./fetch-firmware.sh --version=$VERSION"
-    [ -n "$GITHUB_TOKEN" ] && FETCH_CMD="$FETCH_CMD --token=$GITHUB_TOKEN"
-    $FETCH_CMD || echo "  (Firmware fetch skipped or no releases found)"
+    ./fetch-firmware.sh --version=$VERSION || echo "  (Firmware fetch skipped or no releases found)"
 else
     echo "  Skipping firmware fetch (no --version provided)"
 fi
@@ -111,10 +107,14 @@ cp -r config "$STAGING_DIR/"
 echo "  - Copying Python local code..."
 cp -r local_code "$STAGING_DIR/"
 
-# MCU Firmware binaries
-if [ -d "firmware" ]; then
+# MCU Firmware binaries — always write the flag so unzip overwrites any stale
+# value from a previous deployment (unzip overlays, it never deletes old files)
+if [ -d "firmware" ] && [ "$(find firmware -name '*.bin' 2>/dev/null)" ]; then
     echo "  - Copying MCU firmware binaries..."
     cp -r firmware "$STAGING_DIR/"
+    echo "yes" > "$STAGING_DIR/.firmware-included"
+else
+    echo "no" > "$STAGING_DIR/.firmware-included"
 fi
 
 # SSL certificate generation scripts (improvement over old deployment)

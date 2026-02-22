@@ -226,7 +226,6 @@ This is normal and not an error. The module simply won't be included in the depl
 **Check:**
 - Network access to GitHub
 - The firmware asset exists in the release and is named `firmware.bin`
-- For private repos: `GITHUB_TOKEN` is set or passed via `--token`
 
 ### Firmware not appearing in deployment ZIP
 
@@ -251,18 +250,8 @@ This is normal and not an error. The module simply won't be included in the depl
 
 ## Authentication
 
-The `fetch-firmware.sh` script uses `gh` CLI (preferred) or unauthenticated curl for public repos. For private repositories:
+All firmware repositories are public. The `fetch-firmware.sh` script downloads release assets via unauthenticated HTTPS from GitHub — no tokens or credentials are needed.
 
-**Using gh CLI (recommended):**
 ```bash
-gh auth login
 ./fetch-firmware.sh --version=v1.0.0
-```
-
-**Using token:**
-```bash
-export GITHUB_TOKEN="your_token_here"
-./fetch-firmware.sh --version=v1.0.0
-# or
-./fetch-firmware.sh --version=v1.0.0 --token=your_token_here
 ```

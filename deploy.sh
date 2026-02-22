@@ -344,10 +344,15 @@ else
     echo "  provision_wifi_mqtt.py not found, skipping WiFi provisioning"
 fi
 
-# Step 7: Deploy MCU firmware (if present)
+# Step 7: Deploy MCU firmware (if included in this deployment package)
 echo ""
 echo "Step 7: Deploying MCU firmware (if present)..."
-if [ -d "firmware/wired" ] && [ -f "local_code/trigger_ota_mqtt.py" ]; then
+# Check the .firmware-included flag written by create-deployment-package.sh.
+# This flag is always in the zip, so unzip overwrites it even when firmware/
+# binaries from a previous deployment are left behind (unzip overlays, it
+# never deletes old files).
+FIRMWARE_INCLUDED=$(cat .firmware-included 2>/dev/null)
+if [ "$FIRMWARE_INCLUDED" = "yes" ] && [ -f "local_code/trigger_ota_mqtt.py" ]; then
     echo "  Firmware directory found, querying enabled devices..."
 
     # Query MongoDB for enabled modules via Docker (MongoDB is not exposed to host)
@@ -389,7 +394,7 @@ if [ -d "firmware/wired" ] && [ -f "local_code/trigger_ota_mqtt.py" ]; then
         fi
     fi
 else
-    echo "  No firmware directory or helper scripts found, skipping OTA deployment"
+    echo "  No firmware included in this deployment package, skipping OTA deployment"
 fi
 
 echo ""

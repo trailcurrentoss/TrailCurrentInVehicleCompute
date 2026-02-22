@@ -2,34 +2,24 @@
 set -e
 
 # Firmware Fetcher for TrailCurrent MCU Projects
-# Downloads firmware binaries from GitHub releases
+# Downloads firmware binaries from public GitHub releases using curl
 #
 # Usage:
-#   ./fetch-firmware.sh --version=v0.0.17 [--org=TrailCurrent] [--token=TOKEN]
+#   ./fetch-firmware.sh --version=v0.0.17 [--org=trailcurrentoss]
 #
 # The version must match a release tag in GitHub (e.g., v0.0.17)
 #
-# Authentication:
-#   For private repos, provide a GitHub personal access token:
-#   - Via parameter: ./fetch-firmware.sh --version=v0.0.17 --token=YOUR_TOKEN
-#   - Via environment: export GITHUB_TOKEN=YOUR_TOKEN && ./fetch-firmware.sh --version=v0.0.17
-#
 # Requirements:
-#   - gh CLI (preferred) or curl
+#   - curl
 
 GITHUB_ORG="trailcurrentoss"
 FIRMWARE_DIR="firmware/wired"
-
-# Authentication token (set via environment variable or pass as parameter)
-GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 # Parse parameters
 VERSION=""
 for arg in "$@"; do
     if [[ $arg == --version=* ]]; then
         VERSION="${arg#--version=}"
-    elif [[ $arg == --token=* ]]; then
-        GITHUB_TOKEN="${arg#--token=}"
     elif [[ $arg == --org=* ]]; then
         GITHUB_ORG="${arg#--org=}"
     fi
@@ -38,7 +28,7 @@ done
 # Require version parameter
 if [ -z "$VERSION" ]; then
     echo "ERROR: --version parameter is required"
-    echo "Usage: ./fetch-firmware.sh --version=v0.0.17 [--org=TrailCurrent] [--token=TOKEN]"
+    echo "Usage: ./fetch-firmware.sh --version=v0.0.17 [--org=trailcurrentoss]"
     exit 1
 fi
 
@@ -70,16 +60,6 @@ echo "Organization: $GITHUB_ORG"
 echo "Target version: $VERSION"
 echo ""
 
-# Determine download method
-USE_GH=false
-if command -v gh &> /dev/null && gh auth status &> /dev/null; then
-    USE_GH=true
-    echo "Using: gh CLI"
-else
-    echo "Using: curl"
-fi
-echo ""
-
 # Create firmware directory if it doesn't exist
 mkdir -p "$FIRMWARE_DIR"
 
@@ -97,41 +77,18 @@ for device_info in "${DEVICES[@]}"; do
     mkdir -p "$device_dir"
     temp_file=$(mktemp)
 
-    if $USE_GH; then
-        # Use gh CLI for downloading
-        if gh release download "$VERSION" \
-            --repo "$GITHUB_ORG/$repo_name" \
-            --pattern "firmware.bin" \
-            --dir "$device_dir" \
-            --clobber 2>/dev/null; then
-            file_size=$(du -h "$device_dir/firmware.bin" | cut -f1)
-            echo "Downloaded ($file_size)"
-            FETCHED=$((FETCHED + 1))
-        else
-            echo "Not found (skipping)"
-            rmdir "$device_dir" 2>/dev/null || true
-            SKIPPED=$((SKIPPED + 1))
-        fi
+    download_url="https://github.com/$GITHUB_ORG/$repo_name/releases/download/$VERSION/firmware.bin"
+
+    if curl -s -L -f -o "$temp_file" "$download_url" 2>/dev/null; then
+        mv "$temp_file" "$device_dir/firmware.bin"
+        file_size=$(du -h "$device_dir/firmware.bin" | cut -f1)
+        echo "Downloaded ($file_size)"
+        FETCHED=$((FETCHED + 1))
     else
-        # Fallback to curl with GitHub API
-        download_url="https://github.com/$GITHUB_ORG/$repo_name/releases/download/$VERSION/firmware.bin"
-
-        curl_args=(-s -L -f -o "$temp_file")
-        if [ -n "$GITHUB_TOKEN" ]; then
-            curl_args+=(-H "Authorization: token $GITHUB_TOKEN")
-        fi
-
-        if curl "${curl_args[@]}" "$download_url" 2>/dev/null; then
-            mv "$temp_file" "$device_dir/firmware.bin"
-            file_size=$(du -h "$device_dir/firmware.bin" | cut -f1)
-            echo "Downloaded ($file_size)"
-            FETCHED=$((FETCHED + 1))
-        else
-            rm -f "$temp_file"
-            rmdir "$device_dir" 2>/dev/null || true
-            echo "Not found (skipping)"
-            SKIPPED=$((SKIPPED + 1))
-        fi
+        rm -f "$temp_file"
+        rmdir "$device_dir" 2>/dev/null || true
+        echo "Not found (skipping)"
+        SKIPPED=$((SKIPPED + 1))
     fi
 done
 
@@ -151,8 +108,13 @@ if [ $FETCHED -gt 0 ]; then
     echo ""
 fi
 
-if [ $FETCHED -eq 0 ] && [ $SKIPPED -eq ${#DEVICES[@]} ]; then
-    echo "No firmware found for version $VERSION. This is normal if MCU repos"
-    echo "haven't published a release at this version yet."
-    echo ""
+if [ $FETCHED -eq 0 ]; then
+    # Clean up empty firmware directory so it doesn't get packaged
+    rm -rf "$FIRMWARE_DIR"
+    rmdir firmware 2>/dev/null || true
+    if [ $SKIPPED -eq ${#DEVICES[@]} ]; then
+        echo "No firmware found for version $VERSION. This is normal if MCU repos"
+        echo "haven't published a release at this version yet."
+        echo ""
+    fi
 fi
