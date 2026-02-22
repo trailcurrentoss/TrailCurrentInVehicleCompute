@@ -269,13 +269,15 @@ def extract_and_deploy(zip_path):
     """Extract the zip to ~/ and run deploy.sh."""
     log(f"Extracting {zip_path} to {HOME_DIR}...")
     try:
-        # Remove firmware directory from previous deployments before extracting.
-        # extractall() overlays without removing old files, so firmware binaries
-        # from a prior release would persist and trigger unnecessary MCU OTA updates.
-        firmware_dir = os.path.join(HOME_DIR, 'firmware')
-        if os.path.isdir(firmware_dir):
-            shutil.rmtree(firmware_dir)
-            log("Removed stale firmware directory from previous deployment")
+        # Remove directories whose contents are release-specific before extracting.
+        # extractall() overlays without removing old files, so stale artifacts
+        # from a prior release would persist — causing unnecessary MCU OTA updates
+        # (firmware/) or wasted time loading removed container images (images/).
+        for stale_dir in ['firmware', 'images']:
+            dirpath = os.path.join(HOME_DIR, stale_dir)
+            if os.path.isdir(dirpath):
+                shutil.rmtree(dirpath)
+                log(f"Removed stale {stale_dir}/ directory from previous deployment")
 
         with zipfile.ZipFile(zip_path, 'r') as zf:
             zf.extractall(HOME_DIR)
