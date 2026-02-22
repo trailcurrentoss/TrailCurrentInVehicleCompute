@@ -27,7 +27,9 @@ const STATIC_ASSETS = [
     '/js/pages/trailer.js',
     '/js/pages/water.js',    
     '/icons/icon-192.png',
-    '/icons/icon-512.png'
+    '/icons/icon-512.png',
+    '/icons/logo-color.svg',
+    '/icons/logo-white.svg'
 ];
 
 // Install event - cache static assets

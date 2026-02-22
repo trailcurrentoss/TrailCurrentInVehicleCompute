@@ -7,11 +7,8 @@ export const loginPage = {
             <div class="login-container">
                 <div class="login-card">
                     <div class="login-header">
-                        <svg class="login-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
-                        <h1 class="login-title">TrailCurrent</h1>
+                        <img src="/icons/logo-white.svg" alt="TrailCurrent" class="login-logo-img app-logo-dark">
+                        <img src="/icons/logo-color.svg" alt="TrailCurrent" class="login-logo-img app-logo-light">
                         <p class="login-subtitle">Sign in to continue</p>
                     </div>
 

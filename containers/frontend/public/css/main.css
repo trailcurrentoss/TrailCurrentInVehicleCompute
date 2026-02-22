@@ -45,10 +45,38 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-.app-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--primary);
+/* App logo - theme switching */
+.app-logo {
+    height: 36px;
+    width: auto;
+}
+
+.login-logo-img {
+    height: 48px;
+    width: auto;
+    margin-bottom: 20px;
+}
+
+/* Dark theme: show white logo, hide color logo */
+[data-theme="dark"] .app-logo-dark,
+[data-theme="dark"] .login-logo-img.app-logo-dark {
+    display: block;
+}
+
+[data-theme="dark"] .app-logo-light,
+[data-theme="dark"] .login-logo-img.app-logo-light {
+    display: none;
+}
+
+/* Light theme: show color logo, hide white logo */
+[data-theme="light"] .app-logo-light,
+[data-theme="light"] .login-logo-img.app-logo-light {
+    display: block;
+}
+
+[data-theme="light"] .app-logo-dark,
+[data-theme="light"] .login-logo-img.app-logo-dark {
+    display: none;
 }
 
 .clock {

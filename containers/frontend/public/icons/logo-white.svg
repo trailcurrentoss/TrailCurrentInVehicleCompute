@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" width="240" height="48">
+  <defs>
+    <linearGradient id="trailGradientWhite" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#74fe00"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4, 8)">
+    <path d="M0 28 L12 8 L18 16 L28 4 L38 28 Z" fill="#ffffff" opacity="0.3"/>
+    <path d="M4 26 Q10 22 14 24 Q20 27 24 22 Q28 17 34 20" stroke="url(#trailGradientWhite)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M30 10 L33 16 L29 16 L32 24" stroke="#74fe00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="52" y="33" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="24" font-weight="700" fill="#ffffff">
+    <tspan>Trail</tspan><tspan fill="#d0e2c7">Current</tspan>
+  </text>
+</svg>
