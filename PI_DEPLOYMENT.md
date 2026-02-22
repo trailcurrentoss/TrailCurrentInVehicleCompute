@@ -164,8 +164,9 @@ These items are **PRESERVED** and never deleted by `deploy.sh`:
 
 ### Security
 - `data/keys/` — TLS certificates
-  - Server certificate and key, CA certificate
-  - 10-year validity — no need to regenerate on updates
+  - CA certificate: 10-year validity — no need to regenerate or re-install on devices
+  - Server certificate: ~2-year validity (825 days, required by Apple/iOS)
+  - To renew the server cert: `./scripts/generate-certs.sh 2` (uses existing CA, no need to re-install CA on devices)
 
 ### Data
 - `data/tileserver/map.mbtiles` — Map tile database (~25GB)

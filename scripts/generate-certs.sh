@@ -38,8 +38,9 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_ROOT/.env"
 KEYS_DIR="$PROJECT_ROOT/data/keys"
 
-# Certificate validity (10 years)
-VALIDITY_DAYS=3650
+# Certificate validity
+CA_VALIDITY_DAYS=3650        # 10 years for CA
+SERVER_VALIDITY_DAYS=825     # Apple requires server certs <= 825 days
 
 ################################################################################
 # Functions
@@ -165,7 +166,20 @@ get_cert_mode() {
     esac
 }
 
+detect_local_ips() {
+    # Detect non-loopback IPv4 addresses on this device
+    local ips=""
+    if command -v hostname >/dev/null 2>&1; then
+        ips=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.' | grep -v '^127\.' || true)
+    fi
+    if [ -z "$ips" ] && command -v ifconfig >/dev/null 2>&1; then
+        ips=$(ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | sed 's/addr://' || true)
+    fi
+    echo "$ips"
+}
+
 build_san_list() {
+    # Start with base SANs
     case $CERT_MODE in
         development)
             SAN_LIST="DNS:localhost,IP:127.0.0.1,IP:::1,DNS:$HOSTNAME"
@@ -174,6 +188,18 @@ build_san_list() {
             SAN_LIST="DNS:$HOSTNAME,IP:127.0.0.1,IP:::1"
             ;;
     esac
+
+    # Auto-detect and add local network IP addresses
+    local local_ips
+    local_ips=$(detect_local_ips)
+    if [ -n "$local_ips" ]; then
+        while IFS= read -r ip; do
+            if [ -n "$ip" ] && [ "$ip" != "127.0.0.1" ]; then
+                SAN_LIST="$SAN_LIST,IP:$ip"
+                print_success "Added local IP to certificate: $ip"
+            fi
+        done <<< "$local_ips"
+    fi
 
     print_info "Common Name: $CN"
     print_info "SANs: $SAN_LIST"
@@ -202,15 +228,19 @@ generate_certs() {
         print_info "Using existing CA key"
     fi
 
-    # Generate CA certificate
-    print_info "Generating CA certificate..."
-    openssl req -new -x509 -days $VALIDITY_DAYS \
-        -key "$KEYS_DIR/ca.key" \
-        -out "$KEYS_DIR/ca.crt" \
-        -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=TrailCurrent-CA" 2>/dev/null
-    chmod 644 "$KEYS_DIR/ca.crt"
-    cp "$KEYS_DIR/ca.crt" "$KEYS_DIR/ca.pem"
-    print_success "CA certificate created"
+    # Generate CA certificate (reuse existing so devices don't need to re-install)
+    if [ ! -f "$KEYS_DIR/ca.crt" ]; then
+        print_info "Generating CA certificate..."
+        openssl req -new -x509 -days $CA_VALIDITY_DAYS \
+            -key "$KEYS_DIR/ca.key" \
+            -out "$KEYS_DIR/ca.crt" \
+            -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=TrailCurrent-CA" 2>/dev/null
+        chmod 644 "$KEYS_DIR/ca.crt"
+        cp "$KEYS_DIR/ca.crt" "$KEYS_DIR/ca.pem"
+        print_success "CA certificate created"
+    else
+        print_info "Using existing CA certificate (devices don't need to re-install)"
+    fi
 
     # Generate server key
     print_info "Generating server key..."
@@ -226,12 +256,13 @@ generate_certs() {
         -key "$KEYS_DIR/server.key" \
         -out "$KEYS_DIR/server.csr" \
         -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=$CN" \
-        -addext "subjectAltName=$SAN_LIST" 2>/dev/null
+        -addext "subjectAltName=$SAN_LIST" \
+        -addext "extendedKeyUsage=serverAuth" 2>/dev/null
     print_success "Signing request created"
 
-    # Sign certificate
+    # Sign certificate (825 days max — Apple rejects server certs > 825 days)
     print_info "Signing certificate..."
-    openssl x509 -req -days $VALIDITY_DAYS \
+    openssl x509 -req -days $SERVER_VALIDITY_DAYS \
         -in "$KEYS_DIR/server.csr" \
         -CA "$KEYS_DIR/ca.crt" \
         -CAkey "$KEYS_DIR/ca.key" \
@@ -273,14 +304,20 @@ display_next_steps() {
             echo ""
             ;;
         production)
-            echo "1. Install CA certificate on accessing devices:"
+            echo "1. Install CA certificate on accessing devices (one-time):"
             echo "   File: data/keys/ca.crt"
             echo ""
-            echo "2. Deploy to device with these certificates"
+            echo "2. Restart services to use the new certificate:"
+            echo "   docker compose down && docker compose up -d --no-build"
             echo ""
             echo "3. Access from network:"
             echo "   https://$HOSTNAME"
             echo "   mqtts://$HOSTNAME:8883"
+            echo ""
+            echo "Note: CA cert is valid for 10 years. Server cert is valid"
+            echo "for ~2 years (825 days, required by Apple/iOS). When the"
+            echo "server cert expires, re-run this script — the CA stays the"
+            echo "same so devices don't need to re-install the CA certificate."
             echo ""
             ;;
     esac
