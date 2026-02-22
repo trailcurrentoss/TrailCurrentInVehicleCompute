@@ -234,7 +234,9 @@ generate_certs() {
         openssl req -new -x509 -days $CA_VALIDITY_DAYS \
             -key "$KEYS_DIR/ca.key" \
             -out "$KEYS_DIR/ca.crt" \
-            -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=TrailCurrent-CA" 2>/dev/null
+            -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=TrailCurrent-CA" \
+            -addext "basicConstraints=critical,CA:true" \
+            -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
         chmod 644 "$KEYS_DIR/ca.crt"
         cp "$KEYS_DIR/ca.crt" "$KEYS_DIR/ca.pem"
         print_success "CA certificate created"
@@ -248,7 +250,7 @@ generate_certs() {
     chmod 644 "$KEYS_DIR/server.key"
     print_success "Server key created"
 
-    # Generate CSR with SANs
+    # Generate CSR with SANs and Apple-required extensions
     print_info "Generating signing request..."
 
     # Create config file inline to avoid stdin issues
@@ -256,8 +258,10 @@ generate_certs() {
         -key "$KEYS_DIR/server.key" \
         -out "$KEYS_DIR/server.csr" \
         -subj "/C=US/ST=State/L=City/O=TrailCurrent/OU=Engineering/CN=$CN" \
-        -addext "subjectAltName=$SAN_LIST" \
-        -addext "extendedKeyUsage=serverAuth" 2>/dev/null
+        -addext "basicConstraints=critical,CA:false" \
+        -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
+        -addext "extendedKeyUsage=serverAuth" \
+        -addext "subjectAltName=$SAN_LIST" 2>/dev/null
     print_success "Signing request created"
 
     # Sign certificate (825 days max — Apple rejects server certs > 825 days)

@@ -151,8 +151,8 @@ fi
 echo ""
 echo "Step 1: Stopping existing services..."
 
-# Stop Docker services (docker-compose.yml is at the root level)
-docker compose down 2>/dev/null || true
+# Stop Docker services and remove orphaned containers from previous deployments
+docker compose down --remove-orphans 2>/dev/null || true
 
 # Stop systemd service for Python code
 if systemctl is-active --quiet cantomqtt.service; then
@@ -197,7 +197,8 @@ echo "  local_code/.env: MQTT_BROKER_URL=mqtts://${TLS_HOSTNAME}:8883 (for host 
 echo ""
 echo "Step 4: Starting Docker services..."
 # --no-build: use pre-loaded images, don't try to build from source
-docker compose up -d --no-build
+# --remove-orphans: clean up containers from services removed in newer versions
+docker compose up -d --no-build --remove-orphans
 
 # Step 5: Ensure local_code is deployed to the user's home directory
 echo ""
