@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { encrypt, decrypt } = require('../utils/crypto.js');
+const { injectWithRetry, removeWithRetry } = require('../services/nodered-cloud-workflow.js');
 
 module.exports = (db) => {
     const systemConfig = db.collection('system_config');
@@ -238,6 +239,23 @@ module.exports = (db) => {
                 } catch (error) {
                     console.error('[System Config] Error publishing cloud config notification:', error);
                 }
+
+                // Inject or remove the Node-RED cloud workflow (fire-and-forget)
+                if (cloud_enabled === false) {
+                    removeWithRetry().catch(err =>
+                        console.error('[System Config] Cloud workflow removal failed:', err.message));
+                } else {
+                    // Re-read saved config to get the full set of cloud fields
+                    const saved = await systemConfig.findOne({ _id: 'main' });
+                    if (saved && saved.cloud_enabled) {
+                        let mqttPass = '';
+                        if (saved.cloud_mqtt_password_encrypted && saved.cloud_mqtt_password_iv) {
+                            try { mqttPass = decrypt(saved.cloud_mqtt_password_encrypted, saved.cloud_mqtt_password_iv); } catch {}
+                        }
+                        injectWithRetry(saved.cloud_url, saved.cloud_mqtt_username, mqttPass).catch(err =>
+                            console.error('[System Config] Cloud workflow injection failed:', err.message));
+                    }
+                }
             }
 
             const data = await systemConfig.findOne({ _id: 'main' });
@@ -318,6 +336,10 @@ module.exports = (db) => {
                 { $set: resetConfig },
                 { upsert: true }
             );
+
+            // Remove cloud workflow from Node-RED on reset (fire-and-forget)
+            removeWithRetry().catch(err =>
+                console.error('[System Config] Cloud workflow removal on reset failed:', err.message));
 
             res.json({
                 success: true,

@@ -1,0 +1,1186 @@
+[
+    {
+        "id": "cloud_workflow_tab_01",
+        "type": "tab",
+        "label": "Cloud Workflow",
+        "disabled": false,
+        "info": "Bridges MQTT messages between the local broker and the cloud broker.\n\nCOMMANDS (Cloud → Local):\n- rv/lights/N/command → CAN toggle message → can/outbound\n- rv/thermostat/command → local/thermostat/command\n\nSTATUS (Local → Cloud):\n- local/lights/N/status → rv/lights/N/status\n- local/airquality/* → rv/airquality/*\n- local/gps/* → rv/gps/*\n- local/energy/status → rv/energy/status\n- local/thermostat/status → rv/thermostat/status\n\nThis flow is auto-injected when cloud is enabled in Settings.",
+        "env": []
+    },
+    {
+        "id": "cloud_tls_config_01",
+        "type": "tls-config",
+        "name": "Cloud TLS (Let's Encrypt)",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "__CLOUD_DOMAIN__",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "cloud_mqtt_broker_01",
+        "type": "mqtt-broker",
+        "name": "Cloud MQTT Broker",
+        "broker": "__CLOUD_DOMAIN__",
+        "port": "8883",
+        "tls": "cloud_tls_config_01",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": "",
+        "credentials": {
+            "user": "__CLOUD_MQTT_USER__",
+            "password": "__CLOUD_MQTT_PASS__"
+        }
+    },
+    {
+        "id": "cloud_comment_01",
+        "type": "comment",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud → Local: Light Commands (rv/lights/N/command → CAN outbound)",
+        "info": "Receives light toggle commands from the cloud broker and converts them to CAN bus messages sent to can/outbound on the local broker.",
+        "x": 310,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_1",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light1Cmd",
+        "topic": "rv/lights/1/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 80,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_1"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_1",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device01Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,0,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 80,
+        "wires": [
+            [
+                "cloud_light_cmd_out_1"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_1",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_2",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light2Cmd",
+        "topic": "rv/lights/2/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_2"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_2",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device02Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,0,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 140,
+        "wires": [
+            [
+                "cloud_light_cmd_out_2"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_2",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_3",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light3Cmd",
+        "topic": "rv/lights/3/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 200,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_3"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_3",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device03Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,1,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 200,
+        "wires": [
+            [
+                "cloud_light_cmd_out_3"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_3",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_4",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light4Cmd",
+        "topic": "rv/lights/4/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 260,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_4"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_4",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device04Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,0,1,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 260,
+        "wires": [
+            [
+                "cloud_light_cmd_out_4"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_4",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_5",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light5Cmd",
+        "topic": "rv/lights/5/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_5"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_5",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device05Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,0,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 320,
+        "wires": [
+            [
+                "cloud_light_cmd_out_5"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_5",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_6",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light6Cmd",
+        "topic": "rv/lights/6/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 380,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_6"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_6",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device06Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,0,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 380,
+        "wires": [
+            [
+                "cloud_light_cmd_out_6"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_6",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_7",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light7Cmd",
+        "topic": "rv/lights/7/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 440,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_7"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_7",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device07Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,1,0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 440,
+        "wires": [
+            [
+                "cloud_light_cmd_out_7"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_7",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_8",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light8Cmd",
+        "topic": "rv/lights/8/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 500,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_8"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_8",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "Pdm01Device08Toggle",
+        "func": "msg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 1,\n    \"data\": [\n        [0,0,0,0,0,1,1,1]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 500,
+        "wires": [
+            [
+                "cloud_light_cmd_out_8"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_8",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "cloud_thermo_cmd_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud ThermostatCmd",
+        "topic": "rv/thermostat/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 560,
+        "wires": [
+            [
+                "cloud_thermo_cmd_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_thermo_cmd_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local ThermostatCmd",
+        "topic": "local/thermostat/command",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 410,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "cloud_comment_02",
+        "type": "comment",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local → Cloud: Status Bridges",
+        "info": "Bridges local status topics to the cloud broker so the cloud dashboard can display real-time vehicle data.",
+        "x": 180,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_1",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light1Status",
+        "topic": "local/lights/1/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 660,
+        "wires": [
+            [
+                "cloud_light_sts_out_1"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_1",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light1Status",
+        "topic": "rv/lights/1/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_2",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light2Status",
+        "topic": "local/lights/2/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 720,
+        "wires": [
+            [
+                "cloud_light_sts_out_2"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_2",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light2Status",
+        "topic": "rv/lights/2/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_3",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light3Status",
+        "topic": "local/lights/3/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 780,
+        "wires": [
+            [
+                "cloud_light_sts_out_3"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_3",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light3Status",
+        "topic": "rv/lights/3/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_4",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light4Status",
+        "topic": "local/lights/4/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 840,
+        "wires": [
+            [
+                "cloud_light_sts_out_4"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_4",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light4Status",
+        "topic": "rv/lights/4/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_5",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light5Status",
+        "topic": "local/lights/5/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 900,
+        "wires": [
+            [
+                "cloud_light_sts_out_5"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_5",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light5Status",
+        "topic": "rv/lights/5/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_6",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light6Status",
+        "topic": "local/lights/6/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 960,
+        "wires": [
+            [
+                "cloud_light_sts_out_6"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_6",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light6Status",
+        "topic": "rv/lights/6/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_7",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light7Status",
+        "topic": "local/lights/7/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1020,
+        "wires": [
+            [
+                "cloud_light_sts_out_7"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_7",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light7Status",
+        "topic": "rv/lights/7/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_sts_in_8",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Light8Status",
+        "topic": "local/lights/8/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1080,
+        "wires": [
+            [
+                "cloud_light_sts_out_8"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_sts_out_8",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Light8Status",
+        "topic": "rv/lights/8/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "cloud_comment_03",
+        "type": "comment",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local → Cloud: Sensor & GPS Status",
+        "info": "Bridges air quality, GPS, energy, and thermostat status to the cloud.",
+        "x": 200,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "cloud_temphumid_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local TempHumid",
+        "topic": "local/airquality/temphumid",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1180,
+        "wires": [
+            [
+                "cloud_temphumid_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_temphumid_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud TempHumid",
+        "topic": "rv/airquality/temphumid",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "cloud_airquality_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local AirQuality",
+        "topic": "local/airquality/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1240,
+        "wires": [
+            [
+                "cloud_airquality_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_airquality_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud AirQuality",
+        "topic": "rv/airquality/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1240,
+        "wires": []
+    },
+    {
+        "id": "cloud_gps_latlon_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local GPS LatLon",
+        "topic": "local/gps/latlon",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1300,
+        "wires": [
+            [
+                "cloud_gps_latlon_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_gps_latlon_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud GPS LatLon",
+        "topic": "rv/gps/latlon",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1300,
+        "wires": []
+    },
+    {
+        "id": "cloud_gps_alt_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local GPS Alt",
+        "topic": "local/gps/alt",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1360,
+        "wires": [
+            [
+                "cloud_gps_alt_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_gps_alt_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud GPS Alt",
+        "topic": "rv/gps/alt",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 390,
+        "y": 1360,
+        "wires": []
+    },
+    {
+        "id": "cloud_gps_details_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local GPS Details",
+        "topic": "local/gps/details",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1420,
+        "wires": [
+            [
+                "cloud_gps_details_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_gps_details_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud GPS Details",
+        "topic": "rv/gps/details",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 400,
+        "y": 1420,
+        "wires": []
+    },
+    {
+        "id": "cloud_energy_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local Energy",
+        "topic": "local/energy/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1480,
+        "wires": [
+            [
+                "cloud_energy_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_energy_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud Energy",
+        "topic": "rv/energy/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 390,
+        "y": 1480,
+        "wires": []
+    },
+    {
+        "id": "cloud_thermo_sts_in",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Local ThermostatSts",
+        "topic": "local/thermostat/status",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "116a81d49537d25e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 1540,
+        "wires": [
+            [
+                "cloud_thermo_sts_out"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_thermo_sts_out",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud ThermostatSts",
+        "topic": "rv/thermostat/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "cloud_mqtt_broker_01",
+        "x": 410,
+        "y": 1540,
+        "wires": []
+    }
+]

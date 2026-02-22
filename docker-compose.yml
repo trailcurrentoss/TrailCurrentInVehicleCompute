@@ -43,13 +43,17 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - TLS_CERT_HOSTNAME=${TLS_CERT_HOSTNAME}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - NODE_RED_ADMIN_USER=${NODE_RED_ADMIN_USER}
+      - NODE_RED_ADMIN_PASSWORD=${NODE_RED_ADMIN_PASSWORD}
     volumes:
       - ./data/keys/ca.pem:/app/certs/ca.pem:ro
+      - ./config/node-red/cloud-workflow.json:/app/config/cloud-workflow.json:ro
     restart: unless-stopped # Import for reboots
     depends_on:
       - mosquitto
       - mongodb
       - tileserver
+      - node-red
   mongodb:
     image: mongo:7
     restart: unless-stopped
