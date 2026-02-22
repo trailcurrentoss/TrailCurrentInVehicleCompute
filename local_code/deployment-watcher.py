@@ -423,12 +423,19 @@ def connect_cloud_mqtt(config):
         if reason_code == 0:
             log("Connected to cloud MQTT broker")
             client.subscribe(CLOUD_DEPLOYMENT_TOPIC, qos=1)
-            log(f"Subscribed to {CLOUD_DEPLOYMENT_TOPIC}")
+            log(f"Subscribe request sent for {CLOUD_DEPLOYMENT_TOPIC}")
         else:
             log(f"Failed to connect to cloud MQTT: {reason_code}")
 
+    def on_subscribe(client, userdata, mid, reason_codes, properties):
+        for i, rc in enumerate(reason_codes):
+            if rc.is_failure:
+                log(f"Cloud MQTT subscription FAILED: {rc}")
+            else:
+                log(f"Cloud MQTT subscription confirmed (QoS granted: {rc})")
+
     def on_message(client, userdata, msg):
-        log(f"Received message on {msg.topic}")
+        log(f"Received message on {msg.topic} ({len(msg.payload)} bytes)")
         if msg.topic == CLOUD_DEPLOYMENT_TOPIC:
             handle_deployment(msg.payload.decode('utf-8'))
 
@@ -437,6 +444,7 @@ def connect_cloud_mqtt(config):
             log(f"Disconnected from cloud MQTT (reason: {reason_code}), will reconnect...")
 
     client.on_connect = on_connect
+    client.on_subscribe = on_subscribe
     client.on_message = on_message
     client.on_disconnect = on_disconnect
 
