@@ -582,9 +582,9 @@
         "id": "cloud_comment_02",
         "type": "comment",
         "z": "cloud_workflow_tab_01",
-        "name": "Local → Cloud: Status Bridges",
-        "info": "Bridges local status topics to the cloud broker so the cloud dashboard can display real-time vehicle data.",
-        "x": 180,
+        "name": "Local → Cloud: Status Bridges (rate-limited to 30 msg/sec per topic)",
+        "info": "Bridges local status topics to the cloud broker so the cloud dashboard can display real-time vehicle data.\nEach bridge includes a rate-limit node (30 msg/sec, excess dropped) to protect the cloud broker.",
+        "x": 280,
         "y": 620,
         "wires": []
     },
@@ -603,11 +603,28 @@
         "inputs": 0,
         "x": 150,
         "y": 660,
-        "wires": [
-            [
-                "cloud_light_sts_out_1"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_1"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_1",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 660,
+        "wires": [["cloud_light_sts_out_1"]]
     },
     {
         "id": "cloud_light_sts_out_1",
@@ -623,7 +640,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 660,
         "wires": []
     },
@@ -642,11 +659,28 @@
         "inputs": 0,
         "x": 150,
         "y": 720,
-        "wires": [
-            [
-                "cloud_light_sts_out_2"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_2"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_2",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 720,
+        "wires": [["cloud_light_sts_out_2"]]
     },
     {
         "id": "cloud_light_sts_out_2",
@@ -662,7 +696,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 720,
         "wires": []
     },
@@ -681,11 +715,28 @@
         "inputs": 0,
         "x": 150,
         "y": 780,
-        "wires": [
-            [
-                "cloud_light_sts_out_3"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_3"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_3",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 780,
+        "wires": [["cloud_light_sts_out_3"]]
     },
     {
         "id": "cloud_light_sts_out_3",
@@ -701,7 +752,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 780,
         "wires": []
     },
@@ -720,11 +771,28 @@
         "inputs": 0,
         "x": 150,
         "y": 840,
-        "wires": [
-            [
-                "cloud_light_sts_out_4"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_4"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_4",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 840,
+        "wires": [["cloud_light_sts_out_4"]]
     },
     {
         "id": "cloud_light_sts_out_4",
@@ -740,7 +808,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 840,
         "wires": []
     },
@@ -759,11 +827,28 @@
         "inputs": 0,
         "x": 150,
         "y": 900,
-        "wires": [
-            [
-                "cloud_light_sts_out_5"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_5"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_5",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 900,
+        "wires": [["cloud_light_sts_out_5"]]
     },
     {
         "id": "cloud_light_sts_out_5",
@@ -779,7 +864,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 900,
         "wires": []
     },
@@ -798,11 +883,28 @@
         "inputs": 0,
         "x": 150,
         "y": 960,
-        "wires": [
-            [
-                "cloud_light_sts_out_6"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_6"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_6",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 960,
+        "wires": [["cloud_light_sts_out_6"]]
     },
     {
         "id": "cloud_light_sts_out_6",
@@ -818,7 +920,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 960,
         "wires": []
     },
@@ -837,11 +939,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1020,
-        "wires": [
-            [
-                "cloud_light_sts_out_7"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_7"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_7",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1020,
+        "wires": [["cloud_light_sts_out_7"]]
     },
     {
         "id": "cloud_light_sts_out_7",
@@ -857,7 +976,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1020,
         "wires": []
     },
@@ -876,11 +995,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1080,
-        "wires": [
-            [
-                "cloud_light_sts_out_8"
-            ]
-        ]
+        "wires": [["cloud_light_sts_rl_8"]]
+    },
+    {
+        "id": "cloud_light_sts_rl_8",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1080,
+        "wires": [["cloud_light_sts_out_8"]]
     },
     {
         "id": "cloud_light_sts_out_8",
@@ -896,7 +1032,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1080,
         "wires": []
     },
@@ -904,9 +1040,9 @@
         "id": "cloud_comment_03",
         "type": "comment",
         "z": "cloud_workflow_tab_01",
-        "name": "Local → Cloud: Sensor & GPS Status",
-        "info": "Bridges air quality, GPS, energy, and thermostat status to the cloud.",
-        "x": 200,
+        "name": "Local → Cloud: Sensor & GPS Status (rate-limited)",
+        "info": "Bridges air quality, GPS, energy, and thermostat status to the cloud.\nEach bridge includes a rate-limit node (30 msg/sec, excess dropped).",
+        "x": 240,
         "y": 1140,
         "wires": []
     },
@@ -925,11 +1061,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1180,
-        "wires": [
-            [
-                "cloud_temphumid_out"
-            ]
-        ]
+        "wires": [["cloud_temphumid_rl"]]
+    },
+    {
+        "id": "cloud_temphumid_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1180,
+        "wires": [["cloud_temphumid_out"]]
     },
     {
         "id": "cloud_temphumid_out",
@@ -945,7 +1098,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1180,
         "wires": []
     },
@@ -964,11 +1117,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1240,
-        "wires": [
-            [
-                "cloud_airquality_out"
-            ]
-        ]
+        "wires": [["cloud_airquality_rl"]]
+    },
+    {
+        "id": "cloud_airquality_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1240,
+        "wires": [["cloud_airquality_out"]]
     },
     {
         "id": "cloud_airquality_out",
@@ -984,7 +1154,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1240,
         "wires": []
     },
@@ -1003,11 +1173,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1300,
-        "wires": [
-            [
-                "cloud_gps_latlon_out"
-            ]
-        ]
+        "wires": [["cloud_gps_latlon_rl"]]
+    },
+    {
+        "id": "cloud_gps_latlon_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1300,
+        "wires": [["cloud_gps_latlon_out"]]
     },
     {
         "id": "cloud_gps_latlon_out",
@@ -1023,7 +1210,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1300,
         "wires": []
     },
@@ -1040,13 +1227,30 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 140,
+        "x": 150,
         "y": 1360,
-        "wires": [
-            [
-                "cloud_gps_alt_out"
-            ]
-        ]
+        "wires": [["cloud_gps_alt_rl"]]
+    },
+    {
+        "id": "cloud_gps_alt_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1360,
+        "wires": [["cloud_gps_alt_out"]]
     },
     {
         "id": "cloud_gps_alt_out",
@@ -1062,7 +1266,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 390,
+        "x": 560,
         "y": 1360,
         "wires": []
     },
@@ -1081,11 +1285,28 @@
         "inputs": 0,
         "x": 150,
         "y": 1420,
-        "wires": [
-            [
-                "cloud_gps_details_out"
-            ]
-        ]
+        "wires": [["cloud_gps_details_rl"]]
+    },
+    {
+        "id": "cloud_gps_details_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1420,
+        "wires": [["cloud_gps_details_out"]]
     },
     {
         "id": "cloud_gps_details_out",
@@ -1101,7 +1322,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 400,
+        "x": 560,
         "y": 1420,
         "wires": []
     },
@@ -1118,13 +1339,30 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 140,
+        "x": 150,
         "y": 1480,
-        "wires": [
-            [
-                "cloud_energy_out"
-            ]
-        ]
+        "wires": [["cloud_energy_rl"]]
+    },
+    {
+        "id": "cloud_energy_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1480,
+        "wires": [["cloud_energy_out"]]
     },
     {
         "id": "cloud_energy_out",
@@ -1140,7 +1378,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 390,
+        "x": 560,
         "y": 1480,
         "wires": []
     },
@@ -1157,13 +1395,30 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
+        "x": 150,
         "y": 1540,
-        "wires": [
-            [
-                "cloud_thermo_sts_out"
-            ]
-        ]
+        "wires": [["cloud_thermo_sts_rl"]]
+    },
+    {
+        "id": "cloud_thermo_sts_rl",
+        "type": "delay",
+        "z": "cloud_workflow_tab_01",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1540,
+        "wires": [["cloud_thermo_sts_out"]]
     },
     {
         "id": "cloud_thermo_sts_out",
@@ -1179,7 +1434,7 @@
         "correl": "",
         "expiry": "",
         "broker": "cloud_mqtt_broker_01",
-        "x": 410,
+        "x": 560,
         "y": 1540,
         "wires": []
     }
