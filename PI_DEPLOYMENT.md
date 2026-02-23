@@ -60,8 +60,9 @@ This produces `trailcurrent-deployment-1.0.0.zip` containing:
    On first run, `deploy.sh` will:
    - Create `.env` from `.env.example` and ask you to edit it (then re-run)
    - Generate TLS certificates automatically using `scripts/generate-certs.sh`
+   - Install the CA certificate to the system trust store (for host-side TLS verification)
    - Load all Docker images from tar files
-   - Start all services
+   - Start all services (the backend auto-injects the starter Node-RED flow on first boot)
    - Set up the CAN-to-MQTT bridge
    - Set up the deployment watcher (for cloud OTA updates)
    - Deploy MCU firmware via OTA (if firmware is included)
@@ -153,6 +154,7 @@ When deploying a new version:
 
    On updates, `deploy.sh` will:
    - Stop existing services
+   - Update the system CA trust store if certificates were renewed
    - Load updated Docker images
    - Preserve your `.env`, certificates, map tiles, and Node-RED flows
    - Restart all services

@@ -48,6 +48,7 @@ services:
     volumes:
       - ./data/keys/ca.pem:/app/certs/ca.pem:ro
       - ./config/node-red/cloud-workflow.json:/app/config/cloud-workflow.json:ro
+      - ./config/node-red/starter-flow.json:/app/config/starter-flow.json:ro
     restart: unless-stopped # Import for reboots
     depends_on:
       - mosquitto

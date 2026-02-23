@@ -169,7 +169,7 @@ containers/          Dockerfiles for each service
   tileserver/        Custom tile server (styles, fonts, sprites)
 config/              Version-controlled service configurations
   mosquitto/         mosquitto.conf
-  node-red/          settings.js, starter-flow.json
+  node-red/          settings.js, starter-flow.json, cloud-workflow.json
 data/                Runtime data (gitignored)
   keys/              TLS certificates
   tileserver/        map.mbtiles
@@ -305,7 +305,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 ## Node-RED Setup
 
-Node-RED bridges CAN bus messages to local MQTT topics that the PWA consumes. A starter flow is included at `config/node-red/starter-flow.json`.
+Node-RED bridges CAN bus messages to local MQTT topics that the PWA consumes. Flow templates are stored in `config/node-red/`.
 
 ### What the Starter Flow Does
 
@@ -316,9 +316,18 @@ Node-RED bridges CAN bus messages to local MQTT topics that the PWA consumes. A 
 - **Outbound:** Subscribes to `local/lights/{1-8}/command` (from PWA light toggles) and sends CAN messages to `can/outbound`
 - **Test controls:** Manual inject nodes for toggling lights, setting brightness, and all-on/all-off
 
-### Automatic Loading (First Deploy)
+### Automatic Loading (First Startup)
 
-On the first run of `deploy.sh`, the starter flow is automatically copied to `data/node-red/flows.json` if no existing flows are found. Existing installations are not affected.
+On first startup, the backend automatically detects that Node-RED has no flows and injects the starter flow via the Node-RED Admin API. Existing installations with flows already present are not affected.
+
+### Cloud Workflow (Auto-Injected)
+
+When cloud synchronization is enabled in Settings, the backend automatically injects a "Cloud Workflow" tab into Node-RED that bridges messages between the local and cloud MQTT brokers:
+
+- **Cloud → Local (Commands):** `rv/lights/N/command` → CAN toggle, `rv/thermostat/command` → local passthrough
+- **Local → Cloud (Status):** Light status, air quality, GPS, energy, thermostat — each rate-limited to 30 msg/sec
+
+The cloud workflow is automatically removed when cloud is disabled or the system config is reset. The template is at `config/node-red/cloud-workflow.json`.
 
 ### Manual Import (Existing Installations)
 

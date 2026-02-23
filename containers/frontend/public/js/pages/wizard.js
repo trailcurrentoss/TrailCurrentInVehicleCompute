@@ -45,7 +45,7 @@ export const wizardPage = {
                     <div class="wizard-steps">
                         <div class="wizard-step-indicator step-1 active">
                             <div class="step-number">1</div>
-                            <div class="step-label">Cloud Setup</div>
+                            <div class="step-label">WiFi Setup</div>
                         </div>
                         <div class="wizard-step-indicator step-2">
                             <div class="step-number">2</div>
@@ -93,17 +93,6 @@ export const wizardPage = {
             }
             if (!systemConfig.wifi_password) {
                 systemConfig.wifi_password = '';
-            }
-
-            // Initialize cloud credential fields if not present
-            if (!systemConfig.cloud_mqtt_username) {
-                systemConfig.cloud_mqtt_username = '';
-            }
-            if (!systemConfig.cloud_mqtt_password) {
-                systemConfig.cloud_mqtt_password = '';
-            }
-            if (!systemConfig.cloud_api_key) {
-                systemConfig.cloud_api_key = '';
             }
 
             // Render first step
@@ -168,81 +157,12 @@ export const wizardPage = {
     renderStep1() {
         return `
             <div class="wizard-step">
-                <h2 class="wizard-title">Initial Configuration</h2>
+                <h2 class="wizard-title">WiFi Configuration</h2>
                 <p class="wizard-description">
-                    Configure your system for cloud synchronization and WiFi access for MCU updates.
+                    Configure WiFi access point that MCU devices will use for OTA firmware updates.
                 </p>
 
                 <div class="wizard-form">
-                    <h3 class="wizard-subtitle">Cloud Configuration</h3>
-                    <div class="wizard-field">
-                        <div class="wizard-toggle-group">
-                            <label class="wizard-toggle-label">
-                                <span>Enable Cloud Synchronization</span>
-                            </label>
-                            <button class="toggle-switch ${systemConfig.cloud_enabled ? 'active' : ''}"
-                                    id="cloud-toggle"
-                                    aria-pressed="${systemConfig.cloud_enabled}">
-                            </button>
-                        </div>
-                        <p class="wizard-field-hint">
-                            When enabled, your system data will be synced to the cloud service for remote monitoring and management.
-                        </p>
-                    </div>
-
-                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-fields-container">
-                        <label class="wizard-label" for="cloud-url">Cloud Service URL</label>
-                        <input type="url"
-                               id="cloud-url"
-                               class="wizard-input"
-                               placeholder="https://cloud.example.com"
-                               value="${systemConfig.cloud_url || ''}"
-                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
-                        <p class="wizard-field-hint">
-                            Enter the full URL of your cloud service (e.g., https://cloud.trailcurrent.com)
-                        </p>
-                        <div id="cloud-url-error" class="wizard-error hidden"></div>
-                    </div>
-
-                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-mqtt-username-container">
-                        <label class="wizard-label" for="cloud-mqtt-username">Cloud MQTT Username</label>
-                        <input type="text"
-                               id="cloud-mqtt-username"
-                               class="wizard-input"
-                               placeholder="MQTT username for cloud broker"
-                               value="${systemConfig.cloud_mqtt_username || ''}"
-                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
-                        <p class="wizard-field-hint">Username for connecting to the cloud MQTT broker</p>
-                    </div>
-
-                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-mqtt-password-container">
-                        <label class="wizard-label" for="cloud-mqtt-password">Cloud MQTT Password</label>
-                        <input type="password"
-                               id="cloud-mqtt-password"
-                               class="wizard-input"
-                               placeholder="MQTT password for cloud broker"
-                               value="${systemConfig.cloud_mqtt_password || ''}"
-                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
-                        <p class="wizard-field-hint">Password for connecting to the cloud MQTT broker</p>
-                    </div>
-
-                    <div class="wizard-field ${!systemConfig.cloud_enabled ? 'hidden' : ''}" id="cloud-api-key-container">
-                        <label class="wizard-label" for="cloud-api-key">Cloud API Key</label>
-                        <input type="password"
-                               id="cloud-api-key"
-                               class="wizard-input"
-                               placeholder="rv_... API key from cloud settings"
-                               value="${systemConfig.cloud_api_key || ''}"
-                               ${!systemConfig.cloud_enabled ? 'disabled' : ''}>
-                        <p class="wizard-field-hint">API key for downloading deployments (generate in cloud Settings &gt; API Keys)</p>
-                    </div>
-
-                    <div class="wizard-divider"></div>
-                    <h3 class="wizard-subtitle">WiFi Configuration for MCU Updates</h3>
-                    <p class="wizard-description">
-                        Configure WiFi access point that MCU devices will use for OTA firmware updates.
-                    </p>
-
                     <div class="wizard-field">
                         <label class="wizard-label" for="wizard-wifi-ssid">WiFi SSID (Network Name)</label>
                         <input type="text"
@@ -371,31 +291,15 @@ export const wizardPage = {
 
                 <div class="wizard-summary">
                     <div class="summary-section">
-                        <h3 class="summary-section-title">Cloud Configuration</h3>
+                        <h3 class="summary-section-title">WiFi Configuration</h3>
                         <div class="summary-item">
-                            <span class="summary-label">Cloud Synchronization</span>
-                            <span class="summary-value">
-                                ${systemConfig.cloud_enabled ? 'Enabled' : 'Disabled'}
-                            </span>
+                            <span class="summary-label">WiFi SSID</span>
+                            <span class="summary-value">${systemConfig.wifi_ssid || 'Not configured'}</span>
                         </div>
-                        ${systemConfig.cloud_enabled ? `
-                            <div class="summary-item">
-                                <span class="summary-label">Cloud Service URL</span>
-                                <span class="summary-value summary-url">${systemConfig.cloud_url || 'Not configured'}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">MQTT Username</span>
-                                <span class="summary-value">${systemConfig.cloud_mqtt_username || 'Not configured'}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">MQTT Password</span>
-                                <span class="summary-value">${systemConfig.cloud_mqtt_password ? '••••••••' : 'Not configured'}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">API Key</span>
-                                <span class="summary-value">${systemConfig.cloud_api_key ? '••••••••' : 'Not configured'}</span>
-                            </div>
-                        ` : ''}
+                        <div class="summary-item">
+                            <span class="summary-label">WiFi Password</span>
+                            <span class="summary-value">${systemConfig.wifi_password ? '••••••••' : 'Not configured'}</span>
+                        </div>
                     </div>
 
                     <div class="summary-section">
@@ -424,69 +328,8 @@ export const wizardPage = {
     },
 
     attachStep1Listeners() {
-        const cloudToggle = document.getElementById('cloud-toggle');
-        const cloudUrlInput = document.getElementById('cloud-url');
-        const cloudMqttUsernameInput = document.getElementById('cloud-mqtt-username');
-        const cloudMqttPasswordInput = document.getElementById('cloud-mqtt-password');
-        const cloudApiKeyInput = document.getElementById('cloud-api-key');
         const wifiSsidInput = document.getElementById('wizard-wifi-ssid');
         const wifiPasswordInput = document.getElementById('wizard-wifi-password');
-
-        // All cloud field containers to show/hide together
-        const cloudFieldContainers = [
-            document.getElementById('cloud-fields-container'),
-            document.getElementById('cloud-mqtt-username-container'),
-            document.getElementById('cloud-mqtt-password-container'),
-            document.getElementById('cloud-api-key-container')
-        ];
-
-        if (cloudToggle) {
-            cloudToggle.addEventListener('click', () => {
-                systemConfig.cloud_enabled = !systemConfig.cloud_enabled;
-                cloudToggle.classList.toggle('active', systemConfig.cloud_enabled);
-                cloudToggle.setAttribute('aria-pressed', systemConfig.cloud_enabled);
-
-                // Show/hide all cloud fields
-                cloudFieldContainers.forEach(container => {
-                    if (!container) return;
-                    if (systemConfig.cloud_enabled) {
-                        container.classList.remove('hidden');
-                        container.querySelectorAll('input').forEach(input => input.disabled = false);
-                    } else {
-                        container.classList.add('hidden');
-                        container.querySelectorAll('input').forEach(input => input.disabled = true);
-                    }
-                });
-
-                if (systemConfig.cloud_enabled && cloudUrlInput) {
-                    cloudUrlInput.focus();
-                }
-            });
-        }
-
-        if (cloudUrlInput) {
-            cloudUrlInput.addEventListener('change', (e) => {
-                systemConfig.cloud_url = e.target.value;
-            });
-        }
-
-        if (cloudMqttUsernameInput) {
-            cloudMqttUsernameInput.addEventListener('change', (e) => {
-                systemConfig.cloud_mqtt_username = e.target.value;
-            });
-        }
-
-        if (cloudMqttPasswordInput) {
-            cloudMqttPasswordInput.addEventListener('change', (e) => {
-                systemConfig.cloud_mqtt_password = e.target.value;
-            });
-        }
-
-        if (cloudApiKeyInput) {
-            cloudApiKeyInput.addEventListener('change', (e) => {
-                systemConfig.cloud_api_key = e.target.value;
-            });
-        }
 
         if (wifiSsidInput) {
             wifiSsidInput.addEventListener('change', (e) => {
@@ -650,43 +493,14 @@ export const wizardPage = {
     },
 
     validateStep1() {
-        const cloudUrlInput = document.getElementById('cloud-url');
-        const cloudUrlError = document.getElementById('cloud-url-error');
         const wifiSsidInput = document.getElementById('wizard-wifi-ssid');
         const wifiPasswordInput = document.getElementById('wizard-wifi-password');
         const wifiSsidError = document.getElementById('wizard-wifi-ssid-error');
         const wifiPasswordError = document.getElementById('wizard-wifi-password-error');
 
         // Clear previous errors
-        cloudUrlError.classList.add('hidden');
         wifiSsidError.classList.add('hidden');
         wifiPasswordError.classList.add('hidden');
-
-        // If cloud is enabled, URL must be provided and valid
-        if (systemConfig.cloud_enabled) {
-            const url = cloudUrlInput.value.trim();
-
-            if (!url) {
-                cloudUrlError.textContent = 'Cloud service URL is required when cloud is enabled';
-                cloudUrlError.classList.remove('hidden');
-                cloudUrlInput.focus();
-                return false;
-            }
-
-            // Basic URL validation
-            try {
-                new URL(url);
-            } catch (e) {
-                cloudUrlError.textContent = 'Please enter a valid URL (e.g., https://cloud.example.com)';
-                cloudUrlError.classList.remove('hidden');
-                cloudUrlInput.focus();
-                return false;
-            }
-
-            systemConfig.cloud_url = url;
-        } else {
-            systemConfig.cloud_url = '';
-        }
 
         // WiFi validation: if password is provided, SSID must be provided
         const wifiSsid = wifiSsidInput.value.trim();
@@ -715,11 +529,6 @@ export const wizardPage = {
             // Save configuration
             await API.updateSystemConfig({
                 wizard_completed: true,
-                cloud_enabled: systemConfig.cloud_enabled,
-                cloud_url: systemConfig.cloud_url,
-                cloud_mqtt_username: systemConfig.cloud_mqtt_username || '',
-                cloud_mqtt_password: systemConfig.cloud_mqtt_password || '',
-                cloud_api_key: systemConfig.cloud_api_key || '',
                 mcu_modules: systemConfig.mcu_modules || [],
                 wifi_ssid: systemConfig.wifi_ssid || '',
                 wifi_password: systemConfig.wifi_password || ''

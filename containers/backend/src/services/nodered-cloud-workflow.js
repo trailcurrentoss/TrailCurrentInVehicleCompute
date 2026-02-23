@@ -3,6 +3,7 @@ const http = require('http');
 
 const NODE_RED_URL = 'http://node-red:1880';
 const TEMPLATE_PATH = '/app/config/cloud-workflow.json';
+const STARTER_FLOW_PATH = '/app/config/starter-flow.json';
 const CLOUD_TAB_ID = 'cloud_workflow_tab_01';
 const CLOUD_BROKER_ID = 'cloud_mqtt_broker_01';
 const CLOUD_TLS_ID = 'cloud_tls_config_01';
@@ -215,4 +216,44 @@ async function removeWithRetry(retries = 3) {
     return false;
 }
 
-module.exports = { injectWithRetry, removeWithRetry };
+/**
+ * Inject the starter flow into Node-RED if it has no user flows.
+ * Called on backend startup to seed Node-RED on first boot.
+ */
+async function injectStarterFlowIfEmpty(retries = 5) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const token = await getToken();
+            const authHeader = { Authorization: `Bearer ${token}` };
+
+            const currentFlows = await request('GET', '/flows', null, authHeader);
+
+            // Check if Node-RED already has user-created tabs (flows)
+            const userTabs = currentFlows.filter(node => node.type === 'tab');
+            if (userTabs.length > 0) {
+                console.log(`[Starter Flow] Node-RED already has ${userTabs.length} flow tab(s), skipping starter injection`);
+                return true;
+            }
+
+            // Load and deploy the starter flow
+            const starterFlow = JSON.parse(fs.readFileSync(STARTER_FLOW_PATH, 'utf8'));
+            await request('POST', '/flows', starterFlow, {
+                ...authHeader,
+                'Node-RED-Deployment-Type': 'full',
+            });
+
+            console.log(`[Starter Flow] Successfully injected starter flow (${starterFlow.length} nodes)`);
+            return true;
+        } catch (error) {
+            console.error(`[Starter Flow] Attempt ${attempt}/${retries} failed:`, error.message);
+            if (attempt < retries) {
+                // Longer delay on startup — Node-RED may still be booting
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    }
+    console.error('[Starter Flow] All injection attempts failed');
+    return false;
+}
+
+module.exports = { injectWithRetry, removeWithRetry, injectStarterFlowIfEmpty };

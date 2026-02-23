@@ -139,12 +139,17 @@ fi
 
 echo "  Prerequisites OK"
 
-# Load starter Node-RED flow on first-time setup (won't overwrite existing flows)
-if [ ! -f "data/node-red/flows.json" ] && [ -f "config/node-red/starter-flow.json" ]; then
-    echo "  Loading starter Node-RED flow..."
-    mkdir -p data/node-red
-    cp config/node-red/starter-flow.json data/node-red/flows.json
-    echo "  Starter flow loaded. After startup, open Node-RED and configure MQTT credentials."
+# Install CA certificate to system trust store (enables host-side TLS verification)
+if [ -f "data/keys/ca.crt" ]; then
+    SYSTEM_CA="/usr/local/share/ca-certificates/trailcurrent-ca.crt"
+    # Install or update if the CA cert has changed (handles renewals between runs)
+    if [ ! -f "$SYSTEM_CA" ] || ! cmp -s "data/keys/ca.crt" "$SYSTEM_CA"; then
+        echo "  Installing CA certificate to system trust store..."
+        sudo cp data/keys/ca.crt "$SYSTEM_CA"
+        sudo update-ca-certificates
+    else
+        echo "  CA certificate already in system trust store"
+    fi
 fi
 
 # Step 1: Stop existing services

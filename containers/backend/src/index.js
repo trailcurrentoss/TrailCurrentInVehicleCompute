@@ -91,6 +91,11 @@ async function startServer() {
         // Initialize MQTT service
         mqttService.connect(db, broadcast);
 
+        // Inject starter flow into Node-RED if empty (fire-and-forget)
+        const { injectStarterFlowIfEmpty } = require('./services/nodered-cloud-workflow');
+        injectStarterFlowIfEmpty().catch(err =>
+            console.error('[Startup] Starter flow injection failed:', err.message));
+
         // Start server
         server.listen(PORT, '0.0.0.0', () => {
             console.log(`TrailCurrent API server running on port ${PORT}`);
