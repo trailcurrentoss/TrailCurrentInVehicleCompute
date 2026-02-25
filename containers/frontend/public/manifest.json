@@ -1,7 +1,7 @@
 {
     "name": "TrailCurrent In Vehicle",
     "short_name": "TrailCurrent",
-    "manifest_version": 3,
+    "id": "/",
     "version": "__GIT_SHA__",
     "description": "Software defined vehicles for everyone",
     "start_url": "/",
