@@ -5,28 +5,33 @@ export class Thermostat {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.data = {
-            target_temp: 72,
-            mode: 'auto'
+            target_temp: null,
+            mode: null
         };
         this.wsHandler = null;
+        this.unsubStaleThermostat = null;
 
         this.dataTempAndHumidity = {
-            tempInC: 0,
-            tempInF: 0,
-            humidity: 0
+            tempInC: null,
+            tempInF: null,
+            humidity: null
         }
         this.wsTempAndHumidityHandler = null;
+        this.unsubStaleTempHumid = null;
     }
 
     render() {
+        const currentTempDisplay = this.dataTempAndHumidity.tempInF != null ? Math.round(this.dataTempAndHumidity.tempInF) : '-';
+        const targetTempDisplay = this.data.target_temp != null ? this.data.target_temp : '-';
+        const modeDisplay = this.data.mode || '-';
         return `
             <div class="thermostat-container">
                 <div class="thermostat-dial" id="thermostat-dial">
                     <span class="current-temp">
-                        <span id="current-temp">${this.dataTempAndHumidity.tempInF != null ? Math.round(this.dataTempAndHumidity.tempInF) : '--'}</span><span class="current-temp-unit">°F</span>
+                        <span id="current-temp">${currentTempDisplay}</span><span class="current-temp-unit">°F</span>
                     </span>
-                    <span class="target-temp">Target: <span id="target-temp">${this.data.target_temp}</span>°F</span>
-                    <span class="thermostat-mode" id="thermostat-mode">${this.data.mode}</span>
+                    <span class="target-temp">Target: <span id="target-temp">${targetTempDisplay}</span>°F</span>
+                    <span class="thermostat-mode" id="thermostat-mode">${modeDisplay}</span>
                 </div>
                 <div class="thermostat-controls">
                     <button class="temp-btn" id="temp-down" aria-label="Decrease temperature">−</button>
@@ -39,8 +44,10 @@ export class Thermostat {
     async init() {
         // Fetch initial data
         try {
-            this.data = await API.getThermostat();
-            this.dataTempAndHumidity = {};
+            const thermostatData = await API.getThermostat();
+            if (thermostatData) {
+                this.data = thermostatData;
+            }
             this.updateDisplay();
         } catch (error) {
             console.error('Failed to fetch thermostat data:', error);
@@ -52,7 +59,9 @@ export class Thermostat {
 
         // Setup WebSocket listener
         this.wsHandler = (data) => {
-            this.data = data;
+            if (data) {
+                this.data = data;
+            }
             this.updateDisplay();
         };
         wsClient.on('thermostat', this.wsHandler);
@@ -62,8 +71,16 @@ export class Thermostat {
             this.updateDisplay();
         }
         wsClient.on('temphumid',this.wsTempAndHumidityHandler);
+
+        this.unsubStaleThermostat = wsClient.onStale('thermostat', () => {
+            this.data = { target_temp: null, mode: null };
+            this.updateDisplay();
+        });
+        this.unsubStaleTempHumid = wsClient.onStale('temphumid', () => {
+            this.dataTempAndHumidity = { tempInC: null, tempInF: null, humidity: null };
+            this.updateDisplay();
+        });
     }
-    
 
     updateDisplay() {
         const currentTempEl = document.getElementById('current-temp');
@@ -71,14 +88,15 @@ export class Thermostat {
         const modeEl = document.getElementById('thermostat-mode');
         const dialEl = document.getElementById('thermostat-dial');
 
-        if (currentTempEl) currentTempEl.textContent = this.dataTempAndHumidity.tempInF != null ? Math.round(this.dataTempAndHumidity.tempInF) : '--';
-        if (targetTempEl) targetTempEl.textContent = this.data.target_temp;
-        if (modeEl) modeEl.textContent = this.data.mode;
+        const currentTempDisplay = this.dataTempAndHumidity.tempInF != null ? Math.round(this.dataTempAndHumidity.tempInF) : '-';
+        if (currentTempEl) currentTempEl.textContent = currentTempDisplay;
+        if (targetTempEl) targetTempEl.textContent = this.data.target_temp != null ? this.data.target_temp : '-';
+        if (modeEl) modeEl.textContent = this.data.mode || '-';
 
         // Update dial state based on heating/cooling
         if (dialEl) {
             dialEl.classList.remove('heating', 'cooling');
-            if (this.data.mode !== 'off') {
+            if (this.data.mode && this.data.mode !== 'off' && this.dataTempAndHumidity.tempInF != null && this.data.target_temp != null) {
                 if (this.dataTempAndHumidity.tempInF < this.data.target_temp - 1) {
                     dialEl.classList.add('heating');
                 } else if (this.dataTempAndHumidity.tempInF > this.data.target_temp + 1) {
@@ -105,9 +123,10 @@ export class Thermostat {
         if (this.wsHandler) {
             wsClient.off('thermostat', this.wsHandler);
         }
-
         if (this.wsTempAndHumidityHandler) {
             wsClient.off('temphumid',this.wsTempAndHumidityHandler);
         }
+        if (this.unsubStaleThermostat) this.unsubStaleThermostat();
+        if (this.unsubStaleTempHumid) this.unsubStaleTempHumid();
     }
 }

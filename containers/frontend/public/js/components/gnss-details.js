@@ -5,21 +5,23 @@ export class GnssDetails {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.data = {
-            altitudeFeet: 0,
-            altitudeInMeters: 0
+            altitudeFeet: null,
+            altitudeInMeters: null
         }
         this.gnssDetailsData = {
-            numberOfSatellites: 0,
-            speedOverGround: 0,
-            courseOverGround: 0,
-            gnssMode: 0
+            numberOfSatellites: null,
+            speedOverGround: null,
+            courseOverGround: null,
+            gnssMode: null
         }
         this.wsHandler = null;
         this.wsGnssDetailsHandler = null;
+        this.unsubStaleAlt = null;
+        this.unsubStaleGnss = null;
     }
 
     render() {
-        return `           
+        return `
             <div class="gps-info-row">
                 <div class="gps-info-item">
                     <svg class="gps-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -51,39 +53,39 @@ export class GnssDetails {
 
     formatElevation() {
         const elevation = this.data.altitudeFeet;
-        if (elevation === null || elevation === undefined) {
-            return '--';
+        if (elevation == null) {
+            return '-';
         }
         return `${elevation.toLocaleString()} ft`;
     }
 
     formatSatellites() {
         const satellites = this.gnssDetailsData.numberOfSatellites;
-        if (satellites === null || satellites === undefined) {
-            return '--';
+        if (satellites == null) {
+            return '-';
         }
         return satellites.toString();
     }
 
     renderGnssSystems() {
-        const systems = this.gnssDetailsData.gnssMode || 0;
+        const systems = this.gnssDetailsData.gnssMode != null ? this.gnssDetailsData.gnssMode : 0;
         switch(systems) {
             case 0:
                 return '<span class="gnss-badge inactive">No Fix</span>';
             case 1:
-                return '<span class="gnss-badge active">Gps</span>';            
+                return '<span class="gnss-badge active">Gps</span>';
             case 2:
-                return '<span class="gnss-badge active">Beidou</span>';                            
+                return '<span class="gnss-badge active">Beidou</span>';
             case 3:
-                return '<span class="gnss-badge active">Gps + Beidou</span>';                            
+                return '<span class="gnss-badge active">Gps + Beidou</span>';
             case 4:
-                return '<span class="gnss-badge active">Glonass</span>';                            
+                return '<span class="gnss-badge active">Glonass</span>';
             case 5:
-                return '<span class="gnss-badge active">Gps + Glonass</span>';                            
+                return '<span class="gnss-badge active">Gps + Glonass</span>';
             case 6:
-                return '<span class="gnss-badge active">Beidou + Glonass</span>';                            
+                return '<span class="gnss-badge active">Beidou + Glonass</span>';
             case 7:
-                return '<span class="gnss-badge active">Gps + Beidou + Glonass</span>';                            
+                return '<span class="gnss-badge active">Gps + Beidou + Glonass</span>';
             default:
                  return '<span class="gnss-badge inactive">No Fix</span>';
         }
@@ -91,7 +93,7 @@ export class GnssDetails {
 
     getSatelliteClass() {
         const sats = this.gnssDetailsData.numberOfSatellites;
-        if (sats === null || sats === undefined || sats < 4) return 'poor';
+        if (sats == null || sats < 4) return 'poor';
         if (sats < 8) return 'moderate';
         return 'good';
     }
@@ -104,7 +106,7 @@ export class GnssDetails {
     }
 
     init(data) {
-        this.data = { ...this.data, ...data };
+        if (data) this.data = { ...this.data, ...data };
         this.updateDisplay();
         this.updateGnssDetailsDisplay();
 
@@ -121,6 +123,15 @@ export class GnssDetails {
             this.updateGnssDetailsDisplay();
         }
         wsClient.on('gnss_details',this.wsGnssDetailsHandler);
+
+        this.unsubStaleAlt = wsClient.onStale('alt', () => {
+            this.data = { altitudeFeet: null, altitudeInMeters: null };
+            this.updateDisplay();
+        });
+        this.unsubStaleGnss = wsClient.onStale('gnss_details', () => {
+            this.gnssDetailsData = { numberOfSatellites: null, speedOverGround: null, courseOverGround: null, gnssMode: null };
+            this.updateGnssDetailsDisplay();
+        });
     }
 
     updateDisplay() {
@@ -133,7 +144,7 @@ export class GnssDetails {
 
     updateGnssDetailsDisplay() {
         const satellitesValue = document.getElementById('satellites-value');
-        const gnssSystems = document.getElementById('gnss-systems');        
+        const gnssSystems = document.getElementById('gnss-systems');
         if (satellitesValue) {
             satellitesValue.textContent = this.formatSatellites();
             const satItem = satellitesValue.closest('.gps-info-item');
@@ -154,5 +165,7 @@ export class GnssDetails {
         if (this.wsGnssDetailsHandler) {
             wsClient.off('gnss_details',this.wsGnssDetailsHandler);
         }
+        if (this.unsubStaleAlt) this.unsubStaleAlt();
+        if (this.unsubStaleGnss) this.unsubStaleGnss();
     }
 }

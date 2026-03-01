@@ -5,16 +5,19 @@ export class EnergyDisplay {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.data = {
-            solar_watts: 0,
-            battery_percent: 100,
+            solar_watts: null,
+            battery_percent: null,
             battery_voltage: null,
-            charge_type: 'float',
+            charge_type: null,
             time_remaining_minutes: null
         };
         this.wsHandler = null;
+        this.unsubStale = null;
     }
 
     render() {
+        const batteryLow = this.data.battery_percent != null && this.data.battery_percent < 20;
+        const batteryFillWidth = this.data.battery_percent != null ? (this.data.battery_percent / 100) * 14 : 0;
         return `
             <div class="energy-container">
                 <!-- Solar Panel -->
@@ -31,20 +34,20 @@ export class EnergyDisplay {
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
                     <div class="energy-info">
-                        <span class="energy-value" id="solar-watts">${Math.round(this.data.solar_watts)}<span class="energy-unit">W</span></span>
+                        <span class="energy-value" id="solar-watts">${this.data.solar_watts != null ? Math.round(this.data.solar_watts) : '-'}<span class="energy-unit">W</span></span>
                         <span class="energy-label">Solar Input</span>
                     </div>
                 </div>
 
                 <!-- Battery -->
                 <div class="card energy-card">
-                    <svg class="energy-icon battery ${this.data.battery_percent < 20 ? 'low' : ''}" id="battery-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="energy-icon battery ${batteryLow ? 'low' : ''}" id="battery-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="1" y="6" width="18" height="12" rx="2" ry="2"/>
                         <line x1="23" y1="10" x2="23" y2="14"/>
-                        <rect x="3" y="8" width="${(this.data.battery_percent / 100) * 14}" height="8" fill="currentColor" stroke="none" id="battery-fill"/>
+                        <rect x="3" y="8" width="${batteryFillWidth}" height="8" fill="currentColor" stroke="none" id="battery-fill"/>
                     </svg>
                     <div class="energy-info">
-                        <span class="energy-value" id="battery-percent">${Math.round(this.data.battery_percent)}<span class="energy-unit">%</span></span>
+                        <span class="energy-value" id="battery-percent">${this.data.battery_percent != null ? Math.round(this.data.battery_percent) : '-'}<span class="energy-unit">%</span></span>
                         <span class="energy-label">Battery Level</span>
                     </div>
                 </div>
@@ -66,7 +69,7 @@ export class EnergyDisplay {
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                     </svg>
                     <div class="energy-info">
-                        <span class="charge-badge ${this.data.charge_type}" id="charge-type">${this.formatChargeType(this.data.charge_type)}</span>
+                        <span class="charge-badge ${this.data.charge_type || ''}" id="charge-type">${this.data.charge_type ? this.formatChargeType(this.data.charge_type) : '-'}</span>
                         <span class="energy-label">Charge Status</span>
                     </div>
                 </div>
@@ -98,16 +101,16 @@ export class EnergyDisplay {
 
     formatVoltage() {
         const voltage = this.data.battery_voltage;
-        if (voltage === null || voltage === undefined) {
-            return '--';
+        if (voltage == null) {
+            return '-';
         }
         return voltage.toFixed(1);
     }
 
     formatTimeRemaining() {
         const minutes = this.data.time_remaining_minutes;
-        if (minutes === null || minutes === undefined) {
-            return '--';
+        if (minutes == null) {
+            return '-';
         }
 
         const days = Math.floor(minutes / 1440);
@@ -125,7 +128,7 @@ export class EnergyDisplay {
 
     getTimeRemainingClass() {
         const minutes = this.data.time_remaining_minutes;
-        if (minutes === null || minutes === undefined) {
+        if (minutes == null) {
             return '';
         }
         if (minutes <= 60) {
@@ -136,8 +139,19 @@ export class EnergyDisplay {
         return '';
     }
 
+    markStale() {
+        this.data = {
+            solar_watts: null,
+            battery_percent: null,
+            battery_voltage: null,
+            charge_type: null,
+            time_remaining_minutes: null
+        };
+        this.updateDisplay();
+    }
+
     init(data) {
-        this.data = data || this.data;
+        if (data) this.data = data;
         this.updateDisplay();
 
         // Setup WebSocket listener
@@ -146,6 +160,9 @@ export class EnergyDisplay {
             this.updateDisplay();
         };
         wsClient.on('energy', this.wsHandler);
+
+        // Mark stale if no data arrives within 30s
+        this.unsubStale = wsClient.onStale('energy', () => this.markStale());
     }
 
     updateDisplay() {
@@ -156,11 +173,15 @@ export class EnergyDisplay {
         const batteryIcon = document.getElementById('battery-icon');
 
         if (solarWatts) {
-            solarWatts.innerHTML = `${Math.round(this.data.solar_watts)}<span class="energy-unit">W</span>`;
+            solarWatts.innerHTML = this.data.solar_watts != null
+                ? `${Math.round(this.data.solar_watts)}<span class="energy-unit">W</span>`
+                : `-<span class="energy-unit">W</span>`;
         }
 
         if (batteryPercent) {
-            batteryPercent.innerHTML = `${Math.round(this.data.battery_percent)}<span class="energy-unit">%</span>`;
+            batteryPercent.innerHTML = this.data.battery_percent != null
+                ? `${Math.round(this.data.battery_percent)}<span class="energy-unit">%</span>`
+                : `-<span class="energy-unit">%</span>`;
         }
 
         const batteryVoltage = document.getElementById('battery-voltage');
@@ -169,17 +190,17 @@ export class EnergyDisplay {
         }
 
         if (chargeType) {
-            chargeType.textContent = this.formatChargeType(this.data.charge_type);
-            chargeType.className = `charge-badge ${this.data.charge_type}`;
+            chargeType.textContent = this.data.charge_type ? this.formatChargeType(this.data.charge_type) : '-';
+            chargeType.className = `charge-badge ${this.data.charge_type || ''}`;
         }
 
         if (batteryFill) {
-            const fillWidth = (this.data.battery_percent / 100) * 14;
+            const fillWidth = this.data.battery_percent != null ? (this.data.battery_percent / 100) * 14 : 0;
             batteryFill.setAttribute('width', fillWidth);
         }
 
         if (batteryIcon) {
-            batteryIcon.classList.toggle('low', this.data.battery_percent < 20);
+            batteryIcon.classList.toggle('low', this.data.battery_percent != null && this.data.battery_percent < 20);
         }
 
         const timeRemaining = document.getElementById('time-remaining');
@@ -199,6 +220,9 @@ export class EnergyDisplay {
     cleanup() {
         if (this.wsHandler) {
             wsClient.off('energy', this.wsHandler);
+        }
+        if (this.unsubStale) {
+            this.unsubStale();
         }
     }
 }

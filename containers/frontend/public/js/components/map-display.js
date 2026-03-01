@@ -10,6 +10,8 @@ export class MapDisplay {
         this.wsHandler = null;
         this.wsGnssDetailsHandler = null;
         this.hasReceivedLocation = false;
+        this.unsubStaleLatlon = null;
+        this.unsubStaleGnss = null;
     }
 
     render() {
@@ -247,18 +249,41 @@ export class MapDisplay {
         wsClient.on('latlon', this.wsHandler);
 
         this.wsGnssDetailsHandler = (dataGnssDetails) => {
-            this.hanldeGnssDetailsUpdate(dataGnssDetails);
+            this.handleGnssDetailsUpdate(dataGnssDetails);
         }
         wsClient.on('gnss_details',this.wsGnssDetailsHandler);
+
+        this.unsubStaleLatlon = wsClient.onStale('latlon', () => {
+            this.markLocationStale();
+        });
+        this.unsubStaleGnss = wsClient.onStale('gnss_details', () => {
+            this.speed = null;
+            this.heading = null;
+            if (this.currentPosition) {
+                this.currentPosition.speed = null;
+                this.currentPosition.heading = null;
+                this.updateLocationInfo(this.currentPosition.lat, this.currentPosition.lng, null, null);
+            }
+        });
     }
 
-    hanldeGnssDetailsUpdate(dataGnssDetails) {
-        this.speed = dataGnssDetails.speedOverGround;
-        this.heading = dataGnssDetails.courseOverGround;
+    markLocationStale() {
+        const infoEl = document.getElementById('location-info');
+        if (infoEl) {
+            const statusEl = infoEl.querySelector('.location-status');
+            if (statusEl) {
+                statusEl.innerHTML = 'Waiting for GPS...';
+            }
+        }
+    }
+
+    handleGnssDetailsUpdate(dataGnssDetails) {
         if (this.currentPosition) {
             this.currentPosition.speed = dataGnssDetails.speedOverGround;
             this.currentPosition.heading = dataGnssDetails.courseOverGround;
         }
+        this.speed = dataGnssDetails.speedOverGround;
+        this.heading = dataGnssDetails.courseOverGround;
     }
 
     handleLocationUpdate(data) {
@@ -303,10 +328,11 @@ export class MapDisplay {
             const statusEl = infoEl.querySelector('.location-status');
             if (statusEl) {
                 let text = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                if (this.currentPosition.speed !== null && this.currentPosition.speed !== undefined) {
-                    // Convert m/s to mph
+                if (speed != null) {
                     const speedMph = speed * 2.237;
                     text += ` <br /> ${speedMph.toFixed(0)} mph`;
+                } else {
+                    text += ` <br /> - mph`;
                 }
                 statusEl.innerHTML = text;
                 statusEl.classList.remove('error');
@@ -336,6 +362,9 @@ export class MapDisplay {
             wsClient.off('gnss_details',this.wsGnssDetailsHandler);
             this.wsGnssDetailsHandler = null;
         }
+
+        if (this.unsubStaleLatlon) this.unsubStaleLatlon();
+        if (this.unsubStaleGnss) this.unsubStaleGnss();
 
         // Destroy map
         if (this.map) {
