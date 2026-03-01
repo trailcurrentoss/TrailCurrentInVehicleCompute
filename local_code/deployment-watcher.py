@@ -91,6 +91,38 @@ def log(msg):
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
 
 
+def report_status(deployment_id, status, version='unknown'):
+    """Report deployment status to the cloud API.
+
+    Fire-and-forget with a short timeout. Failures are logged but
+    never block or abort the deployment.
+    """
+    if not cloud_config or not cloud_config.get('cloud_url') or not cloud_config.get('cloud_api_key'):
+        log(f"Cannot report status '{status}' - cloud config not available")
+        return
+
+    try:
+        base_url = cloud_config['cloud_url'].rstrip('/')
+        url = f"{base_url}/api/deployments/status"
+        api_key = cloud_config['cloud_api_key']
+
+        body = json.dumps({
+            'deploymentId': deployment_id,
+            'status': status,
+            'version': version,
+            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        }).encode('utf-8')
+
+        req = Request(url, data=body, method='POST')
+        req.add_header('Authorization', api_key)
+        req.add_header('Content-Type', 'application/json')
+
+        urlopen(req, timeout=10)
+        log(f"Reported status '{status}' for deployment {deployment_id}")
+    except Exception as e:
+        log(f"Failed to report status '{status}' (non-fatal): {e}")
+
+
 def get_backend_container():
     """Find the backend container name using docker compose."""
     try:
@@ -377,14 +409,19 @@ def handle_deployment(payload):
         api_key = cloud_config['cloud_api_key']
 
         log(f"Downloading from {full_url}")
+        report_status(deployment_id, 'downloading', version)
 
         # Download and verify
         zip_path = download_and_verify(full_url, api_key, sha256, deployment_id)
         if not zip_path:
             log("Download or verification failed, aborting deployment")
+            report_status(deployment_id, 'failed', version)
             return
 
+        report_status(deployment_id, 'downloaded', version)
+
         # Extract and deploy
+        report_status(deployment_id, 'deploying', version)
         success = extract_and_deploy(zip_path)
 
         # Clean up zip
@@ -394,8 +431,10 @@ def handle_deployment(payload):
         if success:
             set_last_deployed_id(deployment_id)
             log(f"Deployment {deployment_id} (v{version}) completed successfully")
+            report_status(deployment_id, 'completed', version)
         else:
             log(f"Deployment {deployment_id} (v{version}) failed during deploy.sh execution")
+            report_status(deployment_id, 'failed', version)
 
     finally:
         release_lock()
