@@ -92,9 +92,21 @@ async function startServer() {
         mqttService.connect(db, broadcast);
 
         // Inject starter flow into Node-RED if empty (fire-and-forget)
-        const { injectStarterFlowIfEmpty } = require('./services/nodered-cloud-workflow');
+        const { injectStarterFlowIfEmpty, injectWithRetry } = require('./services/nodered-cloud-workflow');
         injectStarterFlowIfEmpty().catch(err =>
             console.error('[Startup] Starter flow injection failed:', err.message));
+
+        // Re-inject cloud workflow if cloud is enabled (picks up template changes on deploy)
+        const sysConfig = await db.collection('system_config').findOne({ _id: 'main' });
+        if (sysConfig && sysConfig.cloud_enabled) {
+            const { decrypt } = require('./utils/crypto');
+            let mqttPass = '';
+            if (sysConfig.cloud_mqtt_password_encrypted && sysConfig.cloud_mqtt_password_iv) {
+                try { mqttPass = decrypt(sysConfig.cloud_mqtt_password_encrypted, sysConfig.cloud_mqtt_password_iv); } catch {}
+            }
+            injectWithRetry(sysConfig.cloud_url, sysConfig.cloud_mqtt_username, mqttPass).catch(err =>
+                console.error('[Startup] Cloud workflow re-injection failed:', err.message));
+        }
 
         // Sync PDM channel configs to lights collection (fire-and-forget)
         const { syncPdmChannelsToLights } = require('./services/pdm-channel-sync');
