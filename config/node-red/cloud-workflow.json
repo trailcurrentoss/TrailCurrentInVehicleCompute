@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Cloud Workflow",
         "disabled": false,
-        "info": "Bridges MQTT messages between the local broker and the cloud broker.\n\nCOMMANDS (Cloud → Local):\n- rv/lights/N/command → CAN toggle message → can/outbound\n- rv/thermostat/command → local/thermostat/command\n\nSTATUS (Local → Cloud):\n- local/lights/N/status → rv/lights/N/status\n- local/airquality/* → rv/airquality/*\n- local/gps/* → rv/gps/*\n- local/energy/status → rv/energy/status\n- local/thermostat/status → rv/thermostat/status\n\nThis flow is auto-injected when cloud is enabled in Settings.",
+        "info": "Bridges MQTT messages between the local broker and the cloud broker.\n\nCOMMANDS (Cloud → Local):\n- rv/lights/N/command → CAN toggle message → can/outbound\n- rv/lights/all/command → CAN all-lights on/off → can/outbound\n- rv/thermostat/command → local/thermostat/command\n\nSTATUS (Local → Cloud):\n- local/lights/N/status → rv/lights/N/status\n- local/airquality/* → rv/airquality/*\n- local/gps/* → rv/gps/*\n- local/energy/status → rv/energy/status\n- local/thermostat/status → rv/thermostat/status\n\nThis flow is auto-injected when cloud is enabled in Settings.",
         "env": []
     },
     {
@@ -61,8 +61,8 @@
         "id": "cloud_comment_01",
         "type": "comment",
         "z": "cloud_workflow_tab_01",
-        "name": "Cloud → Local: Light Commands (rv/lights/N/command → CAN outbound)",
-        "info": "Receives light toggle commands from the cloud broker and converts them to CAN bus messages sent to can/outbound on the local broker.",
+        "name": "Cloud → Local: Light Commands (rv/lights/N/command + rv/lights/all/command → CAN outbound)",
+        "info": "Receives light toggle commands from the cloud broker and converts them to CAN bus messages sent to can/outbound on the local broker.\nIncludes all-lights on/off via rv/lights/all/command.",
         "x": 310,
         "y": 40,
         "wires": []
@@ -537,6 +537,65 @@
         "broker": "116a81d49537d25e",
         "x": 580,
         "y": 500,
+        "wires": []
+    },
+    {
+        "id": "cloud_light_cmd_in_all",
+        "type": "mqtt in",
+        "z": "cloud_workflow_tab_01",
+        "name": "Cloud AllLightsCmd",
+        "topic": "rv/lights/all/command",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "cloud_mqtt_broker_01",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 540,
+        "wires": [
+            [
+                "cloud_light_cmd_fn_all"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_fn_all",
+        "type": "function",
+        "z": "cloud_workflow_tab_01",
+        "name": "AllLightsToggle",
+        "func": "var state = msg.payload.state;\nmsg.payload = {\n    \"identifier\": \"0x018\",\n    \"data_length_code\": 2,\n    \"data\": [\n        [0,0,0,0,1,0,0,0],\n        [0,0,0,0,0,0,0,state ? 1 : 0]\n    ],\n    \"extd\": false,\n    \"rtr\": false,\n    \"ss\": 0,\n    \"self\": 0\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 540,
+        "wires": [
+            [
+                "cloud_light_cmd_out_all"
+            ]
+        ]
+    },
+    {
+        "id": "cloud_light_cmd_out_all",
+        "type": "mqtt out",
+        "z": "cloud_workflow_tab_01",
+        "name": "CAN Outbound",
+        "topic": "can/outbound",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 580,
+        "y": 540,
         "wires": []
     },
     {

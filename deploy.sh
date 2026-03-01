@@ -181,6 +181,12 @@ for image_file in images/*.tar; do
 done
 echo "  Loaded $images_loaded image(s)"
 
+# Prune dangling images left over from previous deployments
+pruned=$(docker image prune -f 2>/dev/null | grep "Total reclaimed space" || true)
+if [ -n "$pruned" ]; then
+    echo "  Cleaned up old images: $pruned"
+fi
+
 # Step 3: Set up environment files
 echo ""
 echo "Step 3: Setting up environment files..."
@@ -257,19 +263,18 @@ fi
 # Step 6: Restart Python service (cantomqtt)
 echo ""
 echo "Step 6: Restarting Python service (cantomqtt)..."
-if sudo systemctl is-active --quiet cantomqtt.service 2>/dev/null || sudo systemctl is-enabled --quiet cantomqtt.service 2>/dev/null; then
-    sudo systemctl restart cantomqtt.service
-    echo "  cantomqtt.service restarted"
-else
-    echo "  cantomqtt.service not installed, installing..."
-    if [ -f "local_code/can-to-mqtt.service" ]; then
-        sudo cp local_code/can-to-mqtt.service /etc/systemd/system/cantomqtt.service
-        sudo systemctl daemon-reload
+if [ -f "local_code/can-to-mqtt.service" ]; then
+    sudo cp local_code/can-to-mqtt.service /etc/systemd/system/cantomqtt.service
+    sudo systemctl daemon-reload
+    if sudo systemctl is-enabled --quiet cantomqtt.service 2>/dev/null; then
+        sudo systemctl restart cantomqtt.service
+        echo "  cantomqtt.service updated and restarted"
+    else
         sudo systemctl enable --now cantomqtt.service
         echo "  cantomqtt.service installed and started"
-    else
-        echo "  ERROR: local_code/can-to-mqtt.service not found"
     fi
+else
+    echo "  ERROR: local_code/can-to-mqtt.service not found"
 fi
 
 # Wait for cantomqtt to initialize (connect to MQTT broker and CAN bus)

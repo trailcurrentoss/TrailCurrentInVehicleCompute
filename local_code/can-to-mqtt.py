@@ -7,8 +7,15 @@ import os
 import ssl
 import traceback
 import re
+import signal
 
 MAX_RETRIES = 100
+shutdown_requested = False
+
+def handle_signal(signum, frame):
+    global shutdown_requested
+    print(f"Received signal {signum}, shutting down...")
+    shutdown_requested = True
 
 # Load .env file from script directory
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -57,12 +64,11 @@ if not MQTT_PASSWORD:
     print('ERROR: MQTT_PASSWORD environment variable must be set', file=sys.stderr)
     sys.exit(1)
 
-# Define the bus interface and bitrate
-bus = can.interface.Bus(interface='socketcan', channel='can0', bitrate=500000)
 def on_subscribe(client, userdata, mid, reason_code_list, properties):
     print(f"Subscribed with message ID: {mid}")
 
 def on_message(client, userdata, msg):
+    bus = userdata
     try:
         # Conver the MQTT data into JSON
         m_decode = msg.payload.decode('utf-8')
@@ -115,21 +121,37 @@ def on_message(client, userdata, msg):
 
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
-        print("Connected successfully")
+        print("Connected to MQTT broker")
         client.subscribe(MQTT_OUTBOUND_TOPIC)
     else:
-        print(f"Failed to connect: {reason_code}")
+        print(f"Failed to connect to MQTT broker: {reason_code}")
+
+def on_disconnect(client, userdata, flags, reason_code, properties):
+    if reason_code == 0:
+        print("Disconnected from MQTT broker (clean)")
+    else:
+        print(f"Disconnected from MQTT broker unexpectedly (rc={reason_code}), will auto-reconnect")
 
 def int_to_bit_array(n):
     if isinstance(n, int):
         return [int(b) for b in format(n, 'b').zfill(8)]
 
 def main():
+    global shutdown_requested
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
+    bus = None
+    client = None
     try:
-        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv311)
+        bus = can.interface.Bus(interface='socketcan', channel='can0', bitrate=500000)
+        print("CAN bus initialized on can0")
+
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv311, userdata=bus)
         client.on_connect = on_connect
         client.on_subscribe = on_subscribe
         client.on_message = on_message
+        client.on_disconnect = on_disconnect
         # Set username/password authentication
         client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
@@ -141,14 +163,17 @@ def main():
             cert_reqs=ssl.CERT_REQUIRED,
             tls_version=ssl.PROTOCOL_TLSv1_2
         )
+        # Paho auto-reconnects on disconnect; on_connect re-subscribes
+        client.reconnect_delay_set(min_delay=1, max_delay=30)
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
         client.loop_start()
-        while True:
-            message = bus.recv()
+        while not shutdown_requested:
+            # Timeout lets the loop check shutdown_requested periodically
+            message = bus.recv(timeout=1.0)
             if message is not None:
                 frame_id = message.arbitration_id
                 data = message.data
-                data_length_code = message.dlc  
+                data_length_code = message.dlc
                 timestamp = message.timestamp
 
                 # Convert the CAN ID to hexadecimal for easier reading
@@ -163,27 +188,33 @@ def main():
                 }
                 json_payload = json.dumps(mqtt_message)
                 client.publish(MQTT_INBOUND_TOPIC, json_payload)
+        print("Shutdown complete")
     except Exception as e:
         print(f"Error: {e}")
-    except KeyboardInterrupt:
-        client.loop_stop()
-        client.disconnect()
-        bus.shutdown()
+        raise
+    finally:
+        if client:
+            client.loop_stop()
+            client.disconnect()
+        if bus:
+            bus.shutdown()
 
 if __name__ == "__main__":
     retry_count = 0
-    while retry_count < MAX_RETRIES:
+    while retry_count < MAX_RETRIES and not shutdown_requested:
         try:
             main()
-            retry_count = 0 #Reset onc success
-            time.sleep(30)
+            if shutdown_requested:
+                break
+            retry_count = 0
+            time.sleep(5)
         except Exception as e:
             retry_count += 1
-            print(f"Failed to connect to MQTT. Retrying ({retry_count}/{MAX_RETRIES})...")
+            print(f"Error in main loop. Retrying ({retry_count}/{MAX_RETRIES})...")
             with open("crash.log","a") as f:
                 f.write(f"\n---\nError: {e}\n")
                 f.write(traceback.format_exc())
-            time.sleep(30) # Wait before retrying
-    if retry_count == MAX_RETRIES:
-        print(f"Failed to connect to MQTT after {MAX_RETRIES} retries.")
+            time.sleep(30)
+    if retry_count >= MAX_RETRIES:
+        print(f"Failed after {MAX_RETRIES} retries.")
         sys.exit(1)

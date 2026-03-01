@@ -1,7 +1,7 @@
 [Unit]
 Description=CAN Bus to MQTT Service
-After=docker.service
-Requires=docker.service
+After=docker.service can0.service
+Requires=docker.service can0.service
 
 [Service]
 Type=simple
