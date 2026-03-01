@@ -710,7 +710,22 @@ def main():
     log("Connecting to local MQTT broker...")
     setup_local_mqtt()
 
-    # Step 2: Read cloud config and connect to cloud MQTT
+    # Step 2: Check for a deployment that completed while we were restarted.
+    # deploy.sh restarts this service at Step 6.1, so the previous instance
+    # never gets to report 'completed'. We detect this via the pending file.
+    # IMPORTANT: This must happen BEFORE connecting to cloud MQTT, because
+    # the retained deployment message arrives immediately on connect and
+    # would race with setting last_deployed_id.
+    pending = get_pending_deployment()
+    if pending:
+        dep_id, dep_version = pending
+        log(f"Found pending deployment {dep_id} (v{dep_version}) from before restart")
+        # Give deploy.sh time to fully finish (Steps 6.5-7 run after our restart)
+        time.sleep(15)
+        set_last_deployed_id(dep_id)
+        clear_pending_deployment()
+
+    # Step 3: Read cloud config and connect to cloud MQTT
     log("Reading cloud configuration...")
     cloud_config = read_cloud_config()
 
@@ -722,17 +737,10 @@ def main():
     else:
         log("Cloud not enabled or config not available, waiting for configuration...")
 
-    # Step 3: Check for a deployment that completed while we were restarted.
-    # deploy.sh restarts this service at Step 6.1, so the previous instance
-    # never gets to report 'completed'. We detect this via the pending file.
-    pending = get_pending_deployment()
+    # Now that cloud MQTT is connected, report 'completed' for the pending
+    # deployment (if any). The retained message will have been skipped by
+    # handle_deployment since last_deployed_id was already set above.
     if pending:
-        dep_id, dep_version = pending
-        log(f"Found pending deployment {dep_id} (v{dep_version}) from before restart")
-        # Give deploy.sh time to fully finish (Steps 6.5-7 run after our restart)
-        time.sleep(15)
-        set_last_deployed_id(dep_id)
-        clear_pending_deployment()
         report_status(dep_id, 'completed', dep_version)
         log(f"Reported 'completed' for deployment {dep_id} (v{dep_version})")
 
