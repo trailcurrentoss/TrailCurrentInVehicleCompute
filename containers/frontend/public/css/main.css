@@ -3226,6 +3226,62 @@ body {
     cursor: not-allowed;
 }
 
+/* PDM Channel Configuration */
+.pdm-channels-config {
+    padding: 0 24px 16px;
+}
+
+.pdm-channel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pdm-channel-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pdm-channel-number {
+    min-width: 24px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.pdm-channel-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.pdm-channel-icon,
+.pdm-channel-type {
+    width: auto;
+    min-width: 100px;
+}
+
+@media (max-width: 600px) {
+    .pdm-channel-row {
+        flex-wrap: wrap;
+    }
+
+    .pdm-channel-number {
+        min-width: 20px;
+    }
+
+    .pdm-channel-name {
+        flex: 1 1 calc(100% - 32px);
+    }
+
+    .pdm-channel-icon,
+    .pdm-channel-type {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
 /* OTA Testing Section */
 .ota-testing-card {
     margin-bottom: 2rem;

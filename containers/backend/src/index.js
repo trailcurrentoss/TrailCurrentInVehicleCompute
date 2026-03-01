@@ -96,6 +96,11 @@ async function startServer() {
         injectStarterFlowIfEmpty().catch(err =>
             console.error('[Startup] Starter flow injection failed:', err.message));
 
+        // Sync PDM channel configs to lights collection (fire-and-forget)
+        const { syncPdmChannelsToLights } = require('./services/pdm-channel-sync');
+        syncPdmChannelsToLights(db, mqttService).catch(err =>
+            console.error('[Startup] PDM channel sync failed:', err.message));
+
         // Start server
         server.listen(PORT, '0.0.0.0', () => {
             console.log(`TrailCurrent API server running on port ${PORT}`);

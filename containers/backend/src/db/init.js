@@ -44,10 +44,22 @@ async function seedDatabase() {
         const lightDocs = lightNames.map((name, index) => ({
             _id: index + 1,
             name,
+            icon: 'lightbulb',
+            type: 'light',
             updated_at: new Date()
         }));
         await lights.insertMany(lightDocs);
         console.log('Seeded lights');
+    } else {
+        // Migration: add icon and type fields if missing
+        const sample = await lights.findOne({});
+        if (sample && sample.icon === undefined) {
+            await lights.updateMany(
+                { icon: { $exists: false } },
+                { $set: { icon: 'lightbulb', type: 'light' } }
+            );
+            console.log('Migrated lights: added icon and type fields');
+        }
     }
 
     // Seed trailer level

@@ -25,7 +25,7 @@ module.exports = (db) => {
             const { state, brightness } = req.body;
 
             const lightId = parseInt(id);
-            if (isNaN(lightId) || lightId < 1 || lightId > 8) {
+            if (isNaN(lightId) || lightId < 1) {
                 return res.status(400).json({ error: 'Invalid light ID' });
             }
 

@@ -1,5 +1,6 @@
 // Module Configuration page
 import { API } from '../api.js';
+import { ICON_LIST } from '../components/pdm-icons.js';
 
 let systemConfig = null;
 let modules = [];
@@ -113,12 +114,20 @@ export const configPage = {
                             <div id="hostname-error" class="form-error hidden"></div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" id="json-config-group">
                             <label for="module-config" class="form-label">Configuration (JSON)</label>
                             <textarea id="module-config" class="form-input form-textarea"
                                       placeholder='{"key": "value"}'></textarea>
                             <p class="form-hint">Optional: Enter configuration as JSON</p>
                             <div id="config-error" class="form-error hidden"></div>
+                        </div>
+
+                        <div class="pdm-channels-config" id="pdm-channels-config" style="display: none;">
+                            <label class="form-label">Channel Configuration</label>
+                            <p class="form-hint" style="margin-bottom: 12px;">Configure each PDM output channel</p>
+                            <div class="pdm-channel-list" id="pdm-channel-list">
+                                <!-- Channel rows rendered dynamically -->
+                            </div>
                         </div>
 
                         <div id="form-message" class="form-message hidden"></div>
@@ -470,6 +479,12 @@ export const configPage = {
             configEl.addEventListener('click', configContainerClickListener);
         }
 
+        // Module type change — toggle between JSON config and PDM channels UI
+        const typeSelect = document.getElementById('module-type');
+        if (typeSelect) {
+            typeSelect.addEventListener('change', () => this.togglePdmChannelsUI(typeSelect.value));
+        }
+
         // Modal form
         const form = document.getElementById('module-form');
         if (form) {
@@ -510,8 +525,11 @@ export const configPage = {
         // Populate module types
         this.populateModuleTypes();
 
+        // Reset PDM channels UI
+        this.togglePdmChannelsUI('');
+
         // Show modal
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
         backdrop.style.display = 'block';
     },
 
@@ -525,18 +543,27 @@ export const configPage = {
         title.textContent = 'Edit Module';
         submitBtn.textContent = 'Update Module';
 
+        // Populate module types first so the select has the right options
+        this.populateModuleTypes();
+
         // Populate form with module data
         document.getElementById('module-type').value = module.type;
         document.getElementById('module-type').disabled = true; // Can't change type
         document.getElementById('module-name').value = module.name;
         document.getElementById('module-hostname').value = module.hostname || '';
-        document.getElementById('module-config').value = JSON.stringify(module.config || {}, null, 2);
 
-        // Populate module types
-        this.populateModuleTypes();
+        // Handle PDM-specific channel config vs generic JSON
+        if (module.type === 'power_distribution_module') {
+            const channels = module.config?.channels || this.getDefaultChannels();
+            this.togglePdmChannelsUI('power_distribution_module');
+            this.renderChannelRows(channels);
+        } else {
+            this.togglePdmChannelsUI(module.type);
+            document.getElementById('module-config').value = JSON.stringify(module.config || {}, null, 2);
+        }
 
         // Show modal
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
         backdrop.style.display = 'block';
     },
 
@@ -619,7 +646,9 @@ export const configPage = {
         }
 
         let config = {};
-        if (configText) {
+        if (type === 'power_distribution_module') {
+            config = { channels: this.collectChannelData() };
+        } else if (configText) {
             try {
                 config = JSON.parse(configText);
                 if (typeof config !== 'object') {
@@ -845,6 +874,71 @@ export const configPage = {
                 }, 3000);
             }
         }
+    },
+
+    togglePdmChannelsUI(moduleType) {
+        const jsonGroup = document.getElementById('json-config-group');
+        const channelsConfig = document.getElementById('pdm-channels-config');
+
+        if (moduleType === 'power_distribution_module') {
+            jsonGroup.style.display = 'none';
+            channelsConfig.style.display = 'block';
+            // Populate channel rows if empty
+            const list = document.getElementById('pdm-channel-list');
+            if (!list.children.length) {
+                this.renderChannelRows(this.getDefaultChannels());
+            }
+        } else {
+            jsonGroup.style.display = 'block';
+            channelsConfig.style.display = 'none';
+        }
+    },
+
+    getDefaultChannels() {
+        const names = ['Living Room', 'Kitchen', 'Bedroom', 'Bathroom', 'Exterior', 'Awning', 'Porch', 'Storage'];
+        return names.map((name, i) => ({
+            channel: i + 1,
+            name,
+            icon: 'lightbulb',
+            type: 'light'
+        }));
+    },
+
+    renderChannelRows(channels) {
+        const list = document.getElementById('pdm-channel-list');
+        const iconOptions = ICON_LIST.map(ic =>
+            `<option value="${ic.key}">${escapeHtml(ic.label)}</option>`
+        ).join('');
+
+        list.innerHTML = channels.map(ch => `
+            <div class="pdm-channel-row" data-channel="${ch.channel}">
+                <span class="pdm-channel-number">${ch.channel}</span>
+                <input type="text" class="form-input pdm-channel-name" value="${escapeHtml(ch.name)}" placeholder="Channel name">
+                <select class="form-input pdm-channel-icon">${iconOptions}</select>
+                <select class="form-input pdm-channel-type">
+                    <option value="light"${ch.type === 'light' ? ' selected' : ''}>Light</option>
+                    <option value="other"${ch.type === 'other' ? ' selected' : ''}>Other</option>
+                </select>
+            </div>
+        `).join('');
+
+        // Set icon select values after rendering (selected attribute in options)
+        list.querySelectorAll('.pdm-channel-row').forEach((row, i) => {
+            const iconSelect = row.querySelector('.pdm-channel-icon');
+            if (iconSelect && channels[i]) {
+                iconSelect.value = channels[i].icon || 'lightbulb';
+            }
+        });
+    },
+
+    collectChannelData() {
+        const rows = document.querySelectorAll('#pdm-channel-list .pdm-channel-row');
+        return Array.from(rows).map(row => ({
+            channel: parseInt(row.dataset.channel),
+            name: row.querySelector('.pdm-channel-name').value.trim() || `Channel ${row.dataset.channel}`,
+            icon: row.querySelector('.pdm-channel-icon').value,
+            type: row.querySelector('.pdm-channel-type').value
+        }));
     },
 
     cleanup() {

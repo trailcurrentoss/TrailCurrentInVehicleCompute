@@ -1,6 +1,7 @@
 // Light button component
 import { API, wsClient } from '../api.js';
 import { brightnessModal } from './brightness-modal.js';
+import { getIconSvg } from './pdm-icons.js';
 
 export class LightButton {
     constructor(light) {
@@ -9,15 +10,15 @@ export class LightButton {
 
     render() {
         const stateClass = this.light.state ? 'on' : '';
+        const iconKey = this.light.icon || 'lightbulb';
+        const showBrightness = this.light.type !== 'other';
         return `
             <div class="light-btn-wrapper">
                 <button class="light-btn ${stateClass}" data-light-id="${this.light.id}" aria-pressed="${this.light.state ? 'true' : 'false'}">
-                    <svg class="light-icon" viewBox="0 0 24 24" fill="${this.light.state ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                        <path d="M9 18h6M10 22h4M12 2v1M4.22 4.22l.71.71M1 12h1M4.22 19.78l.71-.71M12 23v-1M18.36 4.93l.71-.71M23 12h-1M18.36 19.07l.71.71"/>
-                        <path d="M15 9A3 3 0 0 0 9 9a5.5 5.5 0 0 0 1 7h4a5.5 5.5 0 0 0 1-7z"/>
-                    </svg>
+                    ${getIconSvg(iconKey, !!this.light.state)}
                     <span>${this.light.name}</span>
                 </button>
+                ${showBrightness ? `
                 <button class="brightness-trigger" data-light-id="${this.light.id}" title="Adjust brightness" aria-label="Adjust brightness for ${this.light.name}">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
@@ -30,7 +31,7 @@ export class LightButton {
                         <line x1="7.05" y1="16.95" x2="5.63" y2="18.36"/>
                         <line x1="18.36" y1="5.64" x2="16.95" y2="7.05"/>
                     </svg>
-                </button>
+                </button>` : ''}
             </div>
         `;
     }
@@ -128,9 +129,17 @@ export class LightsGrid {
             btn.classList.toggle('on', updatedLight.state === 1);
             btn.setAttribute('aria-pressed', updatedLight.state === 1 ? 'true' : 'false');
 
-            const svg = btn.querySelector('.light-icon');
-            if (svg) {
-                svg.setAttribute('fill', updatedLight.state ? 'currentColor' : 'none');
+            // Re-render the icon with correct fill state
+            const light = this.lights.find(l => l.id === updatedLight.id);
+            const iconKey = light?.icon || 'lightbulb';
+            const iconContainer = btn.querySelector('.light-icon');
+            if (iconContainer) {
+                const temp = document.createElement('div');
+                temp.innerHTML = getIconSvg(iconKey, updatedLight.state === 1);
+                const newSvg = temp.querySelector('.light-icon');
+                if (newSvg) {
+                    iconContainer.replaceWith(newSvg);
+                }
             }
         }
     }

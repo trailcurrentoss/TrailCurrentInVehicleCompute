@@ -520,6 +520,20 @@ class MqttService {
         return true;
     }
 
+    // Publish PDM channel configuration for cloud sync
+    publishPdmChannelConfig(channels) {
+        if (!this.connected) {
+            console.warn('MQTT not connected, cannot publish PDM channel config');
+            return false;
+        }
+
+        const topic = `${MQTT_ROOT}/config/pdm_channels`;
+        const payload = { channels };
+        console.log(`Publishing PDM channel config to ${topic} (${channels.length} channels)`);
+        this.client.publish(topic, JSON.stringify(payload), { qos: 1, retain: true });
+        return true;
+    }
+
     // Notify local services that cloud configuration has changed
     publishCloudConfigChanged() {
         if (!this.connected) {

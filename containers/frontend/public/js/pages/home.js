@@ -19,7 +19,7 @@ export const homePage = {
                     </div>
 
                     <div class="home-panel lights-panel">
-                        <h2 class="section-title">Lighting</h2>
+                        <h2 class="section-title">Devices</h2>
                         <div class="card" id="lights-card">
                             <!-- Lights will be rendered here -->
                         </div>

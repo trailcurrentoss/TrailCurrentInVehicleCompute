@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { encrypt, decrypt } = require('../utils/crypto.js');
 const { injectWithRetry, removeWithRetry } = require('../services/nodered-cloud-workflow.js');
+const { syncPdmChannelsToLights } = require('../services/pdm-channel-sync.js');
 
 module.exports = (db) => {
     const systemConfig = db.collection('system_config');
@@ -255,6 +256,16 @@ module.exports = (db) => {
                         injectWithRetry(saved.cloud_url, saved.cloud_mqtt_username, mqttPass).catch(err =>
                             console.error('[System Config] Cloud workflow injection failed:', err.message));
                     }
+                }
+            }
+
+            // Sync PDM channel config to lights collection if modules changed
+            if (mcu_modules !== undefined) {
+                const mqttService = require('../mqtt');
+                try {
+                    await syncPdmChannelsToLights(db, mqttService);
+                } catch (error) {
+                    console.error('[System Config] Error syncing PDM channels:', error);
                 }
             }
 
