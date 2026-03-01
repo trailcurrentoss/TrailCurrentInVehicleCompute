@@ -46,10 +46,14 @@ export class LightsGrid {
 
     render(lights) {
         this.lights = lights;
+        const anyOn = lights.some(l => l.state);
         return `
             <div class="lights-grid" id="lights-grid">
                 ${lights.map(light => new LightButton(light).render()).join('')}
             </div>
+            <button class="all-lights-btn ${anyOn ? 'any-on' : ''}" id="all-lights-btn">
+                ${anyOn ? 'All Off' : 'All On'}
+            </button>
         `;
     }
 
@@ -107,6 +111,19 @@ export class LightsGrid {
             });
         });
 
+        // Setup click handler for all on/off button
+        const allBtn = document.getElementById('all-lights-btn');
+        if (allBtn) {
+            allBtn.addEventListener('click', async () => {
+                const anyOn = this.lights.some(l => l.state);
+                try {
+                    await API.setAllLights(anyOn ? 0 : 1);
+                } catch (error) {
+                    console.error('Failed to set all lights:', error);
+                }
+            });
+        }
+
         // Subscribe to WebSocket light status updates
         this.wsHandler = (lightData) => {
             this.updateLight(lightData);
@@ -142,6 +159,17 @@ export class LightsGrid {
                 }
             }
         }
+
+        // Update all on/off button
+        this.updateAllLightsBtn();
+    }
+
+    updateAllLightsBtn() {
+        const allBtn = document.getElementById('all-lights-btn');
+        if (!allBtn) return;
+        const anyOn = this.lights.some(l => l.state);
+        allBtn.textContent = anyOn ? 'All Off' : 'All On';
+        allBtn.classList.toggle('any-on', anyOn);
     }
 
     cleanup() {

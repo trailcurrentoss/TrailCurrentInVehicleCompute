@@ -192,6 +192,13 @@ class API {
         });
     }
 
+    static async setAllLights(state) {
+        return this.request('/lights/all', {
+            method: 'PUT',
+            body: JSON.stringify({ state })
+        });
+    }
+
     // Trailer
     static async getTrailerLevel() {
         return this.request('/trailer/level');

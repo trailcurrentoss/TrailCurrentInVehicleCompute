@@ -566,6 +566,39 @@ body {
     color: var(--btn-text);
 }
 
+/* All On/All Off button */
+.all-lights-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.all-lights-btn:hover {
+    background: var(--bg-card-hover);
+}
+
+.all-lights-btn:active {
+    transform: scale(0.98);
+}
+
+.all-lights-btn.any-on {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: var(--btn-text);
+}
+
+.all-lights-btn.any-on:hover {
+    opacity: 0.9;
+}
+
 /* Brightness Modal */
 .brightness-modal-overlay {
     position: fixed;

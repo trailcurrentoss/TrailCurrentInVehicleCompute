@@ -18,6 +18,25 @@ module.exports = (db) => {
         }
     });
 
+    // PUT /api/lights/all - All on or all off via CAN command
+    // Must be defined before /:id to avoid Express matching "all" as an id
+    router.put('/all', async (req, res) => {
+        try {
+            const { state } = req.body;
+            if (![0, 1].includes(state)) {
+                return res.status(400).json({ error: 'State must be 0 or 1' });
+            }
+
+            // Send CAN all-on/all-off: ID 0x18, ButtonOrCommand=8, CommandValue=state
+            mqttService.publishCanMessage(0x18, [8, state]);
+
+            res.json({ success: true, state });
+        } catch (error) {
+            console.error('Error sending all lights command:', error);
+            res.status(500).json({ error: 'Failed to send all lights command' });
+        }
+    });
+
     // PUT /api/lights/:id - Publish command to MQTT
     router.put('/:id', async (req, res) => {
         try {
