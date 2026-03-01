@@ -73,10 +73,12 @@ if not MQTT_PASSWORD:
 # Topics
 LOCAL_CONFIG_TOPIC = 'local/config/cloud_updated'
 CLOUD_DEPLOYMENT_TOPIC = 'rv/deployment/available'
+CLOUD_STATUS_TOPIC = 'rv/deployment/status'
 
 # Paths
 HOME_DIR = os.path.expanduser('~')
 LAST_DEPLOYED_FILE = os.path.join(HOME_DIR, '.deployment-watcher-last')
+PENDING_STATUS_FILE = os.path.join(HOME_DIR, '.deployment-watcher-pending')
 LOCK_FILE = '/tmp/deployment-watcher.lock'
 
 # State
@@ -84,6 +86,8 @@ cloud_config = None
 cloud_mqtt_client = None
 local_mqtt_client = None
 shutting_down = False
+failed_deployments = {}  # {deployment_id: attempt_count}
+MAX_DEPLOY_ATTEMPTS = 3
 
 
 def log(msg):
@@ -91,34 +95,32 @@ def log(msg):
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
 
 
-def report_status(deployment_id, status, version='unknown'):
-    """Report deployment status to the cloud API.
+def report_status(deployment_id, status, version='unknown', progress=None):
+    """Report deployment status via cloud MQTT.
 
-    Fire-and-forget with a short timeout. Failures are logged but
-    never block or abort the deployment.
+    Publishes to rv/deployment/status with QoS 1. The cloud MQTT
+    broker handles delivery guarantees and reconnection. Failures
+    are logged but never block or abort the deployment.
+
+    When status is 'downloading', progress (0-100) indicates the
+    download percentage.
     """
-    if not cloud_config or not cloud_config.get('cloud_url') or not cloud_config.get('cloud_api_key'):
-        log(f"Cannot report status '{status}' - cloud config not available")
+    if not cloud_mqtt_client:
+        log(f"Cannot report status '{status}' - cloud MQTT not connected")
         return
 
     try:
-        base_url = cloud_config['cloud_url'].rstrip('/')
-        url = f"{base_url}/api/deployments/status"
-        api_key = cloud_config['cloud_api_key']
-
-        body = json.dumps({
+        msg = {
             'deploymentId': deployment_id,
             'status': status,
             'version': version,
             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        }).encode('utf-8')
+        }
+        if progress is not None:
+            msg['progress'] = progress
 
-        req = Request(url, data=body, method='POST')
-        req.add_header('Authorization', api_key)
-        req.add_header('Content-Type', 'application/json')
-
-        urlopen(req, timeout=10)
-        log(f"Reported status '{status}' for deployment {deployment_id}")
+        cloud_mqtt_client.publish(CLOUD_STATUS_TOPIC, json.dumps(msg), qos=1)
+        log(f"Reported status '{status}'{f' ({progress}%)' if progress is not None else ''} for deployment {deployment_id}")
     except Exception as e:
         log(f"Failed to report status '{status}' (non-fatal): {e}")
 
@@ -211,6 +213,43 @@ def get_last_deployed_id():
     return None
 
 
+def set_pending_deployment(deployment_id, version):
+    """Write a pending deployment marker before starting deploy.sh.
+
+    If the watcher process is killed during deploy.sh (e.g. by
+    systemctl restart), the next instance uses this file to detect
+    the deployment and report 'completed'.
+    """
+    try:
+        with open(PENDING_STATUS_FILE, 'w') as f:
+            f.write(f"{deployment_id}:{version}")
+    except Exception as e:
+        log(f"Warning: Could not write pending status file: {e}")
+
+
+def get_pending_deployment():
+    """Read the pending deployment marker, if any. Returns (id, version) or None."""
+    try:
+        if os.path.isfile(PENDING_STATUS_FILE):
+            with open(PENDING_STATUS_FILE, 'r') as f:
+                content = f.read().strip()
+            if ':' in content:
+                dep_id, version = content.split(':', 1)
+                return dep_id, version
+    except Exception:
+        pass
+    return None
+
+
+def clear_pending_deployment():
+    """Remove the pending deployment marker."""
+    try:
+        if os.path.isfile(PENDING_STATUS_FILE):
+            os.remove(PENDING_STATUS_FILE)
+    except Exception:
+        pass
+
+
 def set_last_deployed_id(deployment_id):
     """Write the deployed deployment ID to tracking file."""
     try:
@@ -247,7 +286,8 @@ def release_lock():
         pass
 
 
-def download_and_verify(download_url, api_key, expected_sha256, deployment_id):
+def download_and_verify(download_url, api_key, expected_sha256, deployment_id,
+                        total_size=0, version='unknown'):
     """Download a zip file, verify its SHA256 checksum, return the temp file path."""
     temp_path = os.path.join(tempfile.gettempdir(), f'deployment-{deployment_id}.zip')
 
@@ -257,9 +297,15 @@ def download_and_verify(download_url, api_key, expected_sha256, deployment_id):
 
     sha256 = hashlib.sha256()
     downloaded = 0
+    last_reported_pct = -1
 
     try:
         response = urlopen(req, timeout=300)
+        # Use Content-Length from response if we don't have a size from the payload
+        if not total_size:
+            cl = response.headers.get('Content-Length')
+            if cl:
+                total_size = int(cl)
         with open(temp_path, 'wb') as f:
             while True:
                 chunk = response.read(65536)
@@ -269,11 +315,20 @@ def download_and_verify(download_url, api_key, expected_sha256, deployment_id):
                 sha256.update(chunk)
                 downloaded += len(chunk)
 
+                # Report download progress every 5%
+                if total_size > 0:
+                    pct = int(downloaded * 100 / total_size)
+                    if pct >= last_reported_pct + 5:
+                        last_reported_pct = pct
+                        report_status(deployment_id, 'downloading', version,
+                                      progress=min(pct, 100))
+
         computed_hash = sha256.hexdigest()
         log(f"Downloaded {downloaded} bytes, SHA256: {computed_hash}")
 
         if computed_hash != expected_sha256:
             log(f"CHECKSUM MISMATCH! Expected: {expected_sha256}, Got: {computed_hash}")
+            log(f"  Expected size: {total_size}, Downloaded: {downloaded} bytes")
             os.remove(temp_path)
             return None
 
@@ -392,6 +447,12 @@ def handle_deployment(payload):
         log(f"Deployment {deployment_id} already applied, skipping")
         return
 
+    # Check if we've already failed too many times for this deployment
+    attempts = failed_deployments.get(deployment_id, 0)
+    if attempts >= MAX_DEPLOY_ATTEMPTS:
+        log(f"Deployment {deployment_id} has failed {attempts} times, giving up")
+        return
+
     # Verify we have cloud config
     if not cloud_config or not cloud_config.get('cloud_url') or not cloud_config.get('cloud_api_key'):
         log("Cloud config incomplete (missing URL or API key), cannot download")
@@ -412,13 +473,20 @@ def handle_deployment(payload):
         report_status(deployment_id, 'downloading', version)
 
         # Download and verify
-        zip_path = download_and_verify(full_url, api_key, sha256, deployment_id)
+        zip_path = download_and_verify(full_url, api_key, sha256, deployment_id,
+                                       total_size=size, version=version)
         if not zip_path:
-            log("Download or verification failed, aborting deployment")
+            failed_deployments[deployment_id] = failed_deployments.get(deployment_id, 0) + 1
+            attempts = failed_deployments[deployment_id]
+            log(f"Download or verification failed (attempt {attempts}/{MAX_DEPLOY_ATTEMPTS}), aborting deployment")
             report_status(deployment_id, 'failed', version)
             return
 
         report_status(deployment_id, 'downloaded', version)
+
+        # Write pending marker so the new watcher instance (after deploy.sh
+        # restarts this service) can report 'completed' on our behalf.
+        set_pending_deployment(deployment_id, version)
 
         # Extract and deploy
         report_status(deployment_id, 'deploying', version)
@@ -428,11 +496,18 @@ def handle_deployment(payload):
         if os.path.isfile(zip_path):
             os.remove(zip_path)
 
+        # Note: deploy.sh restarts deployment-watcher at Step 6.1, so
+        # the code below typically never runs. The new watcher instance
+        # detects the pending file on startup and reports 'completed'.
         if success:
+            failed_deployments.pop(deployment_id, None)
             set_last_deployed_id(deployment_id)
+            clear_pending_deployment()
             log(f"Deployment {deployment_id} (v{version}) completed successfully")
             report_status(deployment_id, 'completed', version)
         else:
+            failed_deployments[deployment_id] = failed_deployments.get(deployment_id, 0) + 1
+            clear_pending_deployment()
             log(f"Deployment {deployment_id} (v{version}) failed during deploy.sh execution")
             report_status(deployment_id, 'failed', version)
 
@@ -644,7 +719,21 @@ def main():
     else:
         log("Cloud not enabled or config not available, waiting for configuration...")
 
-    # Step 3: Main loop - keep alive
+    # Step 3: Check for a deployment that completed while we were restarted.
+    # deploy.sh restarts this service at Step 6.1, so the previous instance
+    # never gets to report 'completed'. We detect this via the pending file.
+    pending = get_pending_deployment()
+    if pending:
+        dep_id, dep_version = pending
+        log(f"Found pending deployment {dep_id} (v{dep_version}) from before restart")
+        # Give deploy.sh time to fully finish (Steps 6.5-7 run after our restart)
+        time.sleep(15)
+        set_last_deployed_id(dep_id)
+        clear_pending_deployment()
+        report_status(dep_id, 'completed', dep_version)
+        log(f"Reported 'completed' for deployment {dep_id} (v{dep_version})")
+
+    # Step 4: Main loop - keep alive
     log("Deployment watcher running. Waiting for deployment notifications...")
     while not shutting_down:
         time.sleep(1)
