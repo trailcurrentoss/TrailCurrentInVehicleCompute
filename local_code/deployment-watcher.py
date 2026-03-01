@@ -23,6 +23,7 @@ import subprocess
 import signal
 import shutil
 import tempfile
+import threading
 import traceback
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -96,17 +97,17 @@ def log(msg):
 
 
 def report_status(deployment_id, status, version='unknown', progress=None):
-    """Report deployment status via cloud MQTT.
+    """Report deployment status via HTTP POST to the cloud backend.
 
-    Publishes to rv/deployment/status with QoS 1. The cloud MQTT
-    broker handles delivery guarantees and reconnection. Failures
-    are logged but never block or abort the deployment.
+    Posts to {cloud_url}/api/deployments/status using the cloud API
+    key for authentication. Failures are logged but never block or
+    abort the deployment.
 
     When status is 'downloading', progress (0-100) indicates the
     download percentage.
     """
-    if not cloud_mqtt_client:
-        log(f"Cannot report status '{status}' - cloud MQTT not connected")
+    if not cloud_config or not cloud_config.get('cloud_url') or not cloud_config.get('cloud_api_key'):
+        log(f"Cannot report status '{status}' - cloud config not available")
         return
 
     try:
@@ -119,7 +120,14 @@ def report_status(deployment_id, status, version='unknown', progress=None):
         if progress is not None:
             msg['progress'] = progress
 
-        cloud_mqtt_client.publish(CLOUD_STATUS_TOPIC, json.dumps(msg), qos=1)
+        url = cloud_config['cloud_url'].rstrip('/') + '/api/deployments/status'
+        data = json.dumps(msg).encode('utf-8')
+        req = Request(url, data=data, method='POST')
+        req.add_header('Authorization', cloud_config['cloud_api_key'])
+        req.add_header('Content-Type', 'application/json')
+
+        resp = urlopen(req, timeout=10)
+        resp.read()  # consume response body
         log(f"Reported status '{status}'{f' ({progress}%)' if progress is not None else ''} for deployment {deployment_id}")
     except Exception as e:
         log(f"Failed to report status '{status}' (non-fatal): {e}")
@@ -565,7 +573,14 @@ def connect_cloud_mqtt(config):
     def on_message(client, userdata, msg):
         log(f"Received message on {msg.topic} ({len(msg.payload)} bytes)")
         if msg.topic == CLOUD_DEPLOYMENT_TOPIC:
-            handle_deployment(msg.payload.decode('utf-8'))
+            # Run in a separate thread so the MQTT network loop stays alive.
+            # Otherwise this callback blocks keepalives and publish flushes
+            # for the entire download+deploy duration.
+            threading.Thread(
+                target=handle_deployment,
+                args=(msg.payload.decode('utf-8'),),
+                daemon=True
+            ).start()
 
     def on_disconnect(client, userdata, flags, reason_code, properties):
         if not shutting_down:
