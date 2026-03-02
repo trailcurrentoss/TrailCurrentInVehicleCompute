@@ -528,7 +528,7 @@ def handle_deployment(payload):
 
 # --- Cloud MQTT Client ---
 
-def connect_cloud_mqtt(config):
+def connect_cloud_mqtt(config, _retry=False):
     """Connect to the cloud MQTT broker and subscribe to deployment topic."""
     global cloud_mqtt_client
 
@@ -598,6 +598,35 @@ def connect_cloud_mqtt(config):
     except Exception as e:
         log(f"Failed to connect to cloud MQTT: {e}")
         cloud_mqtt_client = None
+        if not _retry:
+            # Start background retry — the initial connect() likely failed
+            # because the network wasn't ready yet (common on boot). Paho only
+            # auto-reconnects after a successful initial connect, so we must
+            # retry ourselves.
+            threading.Thread(
+                target=_retry_cloud_connect,
+                args=(config,),
+                daemon=True
+            ).start()
+
+
+def _retry_cloud_connect(config):
+    """Retry cloud MQTT connection with exponential backoff."""
+    delay = 10
+    max_delay = 300
+    while not shutting_down and cloud_mqtt_client is None:
+        log(f"Retrying cloud MQTT connection in {delay}s...")
+        for _ in range(delay):
+            if shutting_down or cloud_mqtt_client is not None:
+                return
+            time.sleep(1)
+        if cloud_mqtt_client is not None:
+            return
+        connect_cloud_mqtt(config, _retry=True)
+        if cloud_mqtt_client is not None:
+            log("Cloud MQTT connection established on retry")
+            return
+        delay = min(delay * 2, max_delay)
 
 
 def disconnect_cloud_mqtt():

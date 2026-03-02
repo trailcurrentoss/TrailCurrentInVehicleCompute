@@ -1,7 +1,8 @@
 [Unit]
 Description=TrailCurrent Deployment Watcher
-After=docker.service
+After=docker.service network-online.target
 Requires=docker.service
+Wants=network-online.target
 
 [Service]
 Type=simple
