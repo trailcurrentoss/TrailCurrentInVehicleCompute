@@ -264,6 +264,12 @@ module.exports = (db) => {
                 const mqttService = require('../mqtt');
                 try {
                     await syncPdmChannelsToLights(db, mqttService);
+                    // Broadcast updated light names to all WebSocket clients immediately
+                    const broadcast = req.app.get('broadcast');
+                    if (broadcast) {
+                        const allLights = await db.collection('lights').find().sort({ _id: 1 }).toArray();
+                        broadcast('lights_config', allLights.map(l => ({ id: l._id, name: l.name })));
+                    }
                 } catch (error) {
                     console.error('[System Config] Error syncing PDM channels:', error);
                 }

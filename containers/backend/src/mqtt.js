@@ -213,9 +213,18 @@ class MqttService {
     async handleLightStatus(lightId, payload) {
         console.log(`Received light status for light ${lightId}:`, payload);
 
-        // Broadcast light status data directly via WebSocket (no database storage needed)
+        // Broadcast light status data via WebSocket, including name from DB
         if (this.broadcast) {
-            this.broadcast('light', { "id": lightId, "_id": lightId, "state": payload.state, "brightness": payload.brightness });
+            const lightData = { "id": lightId, "_id": lightId, "state": payload.state, "brightness": payload.brightness };
+            try {
+                const light = await this.db.collection('lights').findOne({ _id: lightId });
+                if (light && light.name) {
+                    lightData.name = light.name;
+                }
+            } catch (err) {
+                // Non-fatal — broadcast without name
+            }
+            this.broadcast('light', lightData);
         }
     }
 
