@@ -4,6 +4,7 @@ const http = require('http');
 const NODE_RED_URL = 'http://node-red:1880';
 const TEMPLATE_PATH = '/app/config/cloud-workflow.json';
 const STARTER_FLOW_PATH = '/app/config/starter-flow.json';
+const STARTER_TAB_ID = 'starter_flow_tab_01';
 const CLOUD_TAB_ID = 'cloud_workflow_tab_01';
 const CLOUD_BROKER_ID = 'cloud_mqtt_broker_01';
 const CLOUD_TLS_ID = 'cloud_tls_config_01';
@@ -228,16 +229,20 @@ async function injectStarterFlowIfEmpty(retries = 5) {
 
             const currentFlows = await request('GET', '/flows', null, authHeader);
 
-            // Check if Node-RED already has user-created tabs (flows)
-            const userTabs = currentFlows.filter(node => node.type === 'tab');
-            if (userTabs.length > 0) {
-                console.log(`[Starter Flow] Node-RED already has ${userTabs.length} flow tab(s), skipping starter injection`);
+            // Check if the starter flow tab is already present
+            const hasStarterTab = currentFlows.some(node => node.id === STARTER_TAB_ID);
+            if (hasStarterTab) {
+                console.log('[Starter Flow] Starter flow tab already present, skipping injection');
                 return true;
             }
 
-            // Load and deploy the starter flow
+            // Load the starter flow template
             const starterFlow = JSON.parse(fs.readFileSync(STARTER_FLOW_PATH, 'utf8'));
-            await request('POST', '/flows', starterFlow, {
+
+            // Merge with existing flows (preserve cloud workflow or other tabs)
+            const merged = [...currentFlows, ...starterFlow];
+
+            await request('POST', '/flows', merged, {
                 ...authHeader,
                 'Node-RED-Deployment-Type': 'full',
             });
