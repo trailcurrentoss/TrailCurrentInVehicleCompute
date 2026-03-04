@@ -256,6 +256,10 @@ class MqttService {
                     updates.time_remaining_minutes = payload.time_remaining_minutes;
                 }
 
+                if (payload.consumption_watts !== undefined) {
+                    updates.consumption_watts = payload.consumption_watts;
+                }
+
                 if (Object.keys(updates).length > 1) {
                     const energy = this.db.collection('energy');
                     await energy.updateOne(

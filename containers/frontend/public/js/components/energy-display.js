@@ -9,7 +9,8 @@ export class EnergyDisplay {
             battery_percent: null,
             battery_voltage: null,
             charge_type: null,
-            time_remaining_minutes: null
+            time_remaining_minutes: null,
+            consumption_watts: null
         };
         this.wsHandler = null;
         this.unsubStale = null;
@@ -74,6 +75,19 @@ export class EnergyDisplay {
                     </div>
                 </div>
 
+                <!-- Power Consumption -->
+                <div class="card energy-card">
+                    <svg class="energy-icon consumption" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10"/>
+                        <path d="M12 20V4"/>
+                        <path d="M6 20v-6"/>
+                    </svg>
+                    <div class="energy-info">
+                        <span class="energy-value" id="consumption-watts">${this.data.consumption_watts != null ? Math.round(this.data.consumption_watts) : '-'}<span class="energy-unit">W</span></span>
+                        <span class="energy-label">Power Consumption</span>
+                    </div>
+                </div>
+
                 <!-- Time Remaining -->
                 <div class="card energy-card time-remaining-card ${this.getTimeRemainingClass()}">
                     <svg class="energy-icon time-remaining" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,10 +105,12 @@ export class EnergyDisplay {
 
     formatChargeType(type) {
         const types = {
+            off: 'Off',
             float: 'Float',
             bulk: 'Bulk',
             absorption: 'Absorption',
-            equalize: 'Equalize'
+            equalize: 'Equalize',
+            fault: 'Fault'
         };
         return types[type] || type;
     }
@@ -145,7 +161,8 @@ export class EnergyDisplay {
             battery_percent: null,
             battery_voltage: null,
             charge_type: null,
-            time_remaining_minutes: null
+            time_remaining_minutes: null,
+            consumption_watts: null
         };
         this.updateDisplay();
     }
@@ -201,6 +218,13 @@ export class EnergyDisplay {
 
         if (batteryIcon) {
             batteryIcon.classList.toggle('low', this.data.battery_percent != null && this.data.battery_percent < 20);
+        }
+
+        const consumptionWatts = document.getElementById('consumption-watts');
+        if (consumptionWatts) {
+            consumptionWatts.innerHTML = this.data.consumption_watts != null
+                ? `${Math.round(this.data.consumption_watts)}<span class="energy-unit">W</span>`
+                : `-<span class="energy-unit">W</span>`;
         }
 
         const timeRemaining = document.getElementById('time-remaining');

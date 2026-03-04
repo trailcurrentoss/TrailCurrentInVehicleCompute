@@ -115,11 +115,14 @@
             { "t": "eq", "v": "0x006", "vt": "str" },
             { "t": "eq", "v": "0x007", "vt": "str" },
             { "t": "eq", "v": "0x008", "vt": "str" },
-            { "t": "eq", "v": "0x009", "vt": "str" }
+            { "t": "eq", "v": "0x009", "vt": "str" },
+            { "t": "eq", "v": "0x023", "vt": "str" },
+            { "t": "eq", "v": "0x024", "vt": "str" },
+            { "t": "eq", "v": "0x02c", "vt": "str" }
         ],
         "checkall": "true",
         "repair": false,
-        "outputs": 6,
+        "outputs": 9,
         "x": 880,
         "y": 640,
         "wires": [
@@ -147,6 +150,15 @@
             ],
             [
                 "b06c10960e1b4497"
+            ],
+            [
+                "energy_parse_batt_status"
+            ],
+            [
+                "energy_parse_wattage_ttg"
+            ],
+            [
+                "energy_parse_solar_mppt"
             ]
         ]
     },
@@ -2249,5 +2261,113 @@
                 "a18c8e9eefccbfb9"
             ]
         ]
+    },
+    {
+        "id": "energy_comment_01",
+        "type": "comment",
+        "z": "starter_flow_tab_01",
+        "name": "Energy: Shunt (0x23, 0x24) + MPPT (0x2C) → local/energy/status",
+        "info": "Decodes Victron BMV (Shunt Gateway) and MPPT (Solar Gateway) CAN messages.\n0x23: battery voltage, SOC\n0x24: instantaneous power (P), time-to-go (TTG)\n0x2C: solar watts (PPV), charge status (CS)\nAll feed into a merge node that accumulates state and publishes to local/energy/status.",
+        "x": 1220,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "energy_parse_batt_status",
+        "type": "function",
+        "z": "starter_flow_tab_01",
+        "name": "ParseBatteryStatus",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nmsg.payload = {\n    battery_voltage: decoded[0] + (decoded[1] / 100),\n    battery_percent: decoded[5] + (decoded[6] / 100)\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 1140,
+        "wires": [
+            [
+                "energy_merge_state"
+            ]
+        ]
+    },
+    {
+        "id": "energy_parse_wattage_ttg",
+        "type": "function",
+        "z": "starter_flow_tab_01",
+        "name": "ParseWattageTTG",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nlet isNegative = decoded[0] === 0xFF;\nlet wattage = (decoded[1] << 8) | decoded[2];\nlet ttg = (decoded[3] << 8) | decoded[4];\nmsg.payload = {\n    consumption_watts: isNegative ? 0 : wattage\n};\nif (ttg > 0 && ttg < 0xFFFF) {\n    msg.payload.time_remaining_minutes = ttg;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 1200,
+        "wires": [
+            [
+                "energy_merge_state"
+            ]
+        ]
+    },
+    {
+        "id": "energy_parse_solar_mppt",
+        "type": "function",
+        "z": "starter_flow_tab_01",
+        "name": "ParseSolarMPPT",
+        "func": "let decoded = msg.payload.data.map(bitArray => \n    Number.parseInt(bitArray.join(''), 2)\n);\nlet solarWatts = (decoded[2] << 8) | decoded[3];\nlet csEnum = decoded[6];\nlet chargeTypes = {0:'off', 2:'fault', 3:'bulk', 4:'absorption', 5:'float', 7:'equalize'};\nmsg.payload = {\n    solar_watts: solarWatts,\n    charge_type: chargeTypes[csEnum] || 'unknown'\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 1260,
+        "wires": [
+            [
+                "energy_merge_state"
+            ]
+        ]
+    },
+    {
+        "id": "energy_merge_state",
+        "type": "function",
+        "z": "starter_flow_tab_01",
+        "name": "MergeEnergyState",
+        "func": "let energy = flow.get('energy') || {};\nObject.assign(energy, msg.payload);\nflow.set('energy', energy);\nmsg.payload = energy;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1360,
+        "y": 1170,
+        "wires": [
+            [
+                "energy_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "energy_mqtt_out",
+        "type": "mqtt out",
+        "z": "starter_flow_tab_01",
+        "name": "Energy Status",
+        "topic": "local/energy/status",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "116a81d49537d25e",
+        "x": 1560,
+        "y": 1170,
+        "wires": []
     }
 ]

@@ -982,6 +982,10 @@ body {
     color: var(--info);
 }
 
+.energy-icon.consumption {
+    color: var(--warning);
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
@@ -1033,6 +1037,16 @@ body {
 .charge-badge.absorption {
     background: var(--info-bg-subtle);
     color: var(--info);
+}
+
+.charge-badge.off {
+    background: var(--text-muted);
+    color: var(--bg-primary);
+}
+
+.charge-badge.fault {
+    background: var(--danger);
+    color: var(--bg-primary);
 }
 
 .charge-badge.equalize {
